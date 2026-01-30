@@ -3,142 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Smart OS (Fixed)</title>
+    <title>Ultra Smart OS (Addon Edition)</title>
     <style>
-        /* --- 1. CORE SYSTEM --- */
+        /* --- CORE VISUALS --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { 
             width: 100%; height: 100%; 
-            overflow: hidden; 
-            background-color: #000; /* Default Black */
-            font-family: sans-serif; 
+            background: #000; overflow: hidden; 
+            font-family: 'Segoe UI', sans-serif; 
         }
 
-        /* --- 2. WALLPAPER ENGINE (FIXED LAYERS) --- */
-        #wallpaper-engine {
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            z-index: 1; /* FIXED: Now visible above body */
+        /* --- LAYERS --- */
+        #wallpaper-engine { position: fixed; inset: 0; z-index: 1; }
+        .smart-bg { 
+            position: absolute; inset: 0; width: 100%; height: 100%; 
+            object-fit: cover; opacity: 0; transition: opacity 0.8s ease; 
         }
+        .active-bg { opacity: 1; }
 
-        .smart-bg {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            opacity: 0; 
-            transition: opacity 0.5s ease;
-            display: none; /* Hide by default */
-        }
-
-        .active-bg { 
-            opacity: 1; 
-            display: block; /* Show only when active */
-        }
-
-        /* --- 3. UI LAYER (On Top) --- */
-        #settings-trigger {
-            position: absolute;
-            right: 20px; top: 20px;
-            width: 45px; height: 45px;
-            background: rgba(255, 255, 255, 0.15);
+        /* --- UI CONTROLS --- */
+        #settings-btn {
+            position: absolute; top: 20px; right: 20px;
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            cursor: pointer;
-            backdrop-filter: blur(10px);
+            border-radius: 50%; cursor: pointer;
+            backdrop-filter: blur(10px); z-index: 100;
             display: flex; align-items: center; justify-content: center;
-            z-index: 100; /* FIXED: Always on top */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .gear-icon { width: 22px; height: 22px; fill: #fff; }
-        #file-picker { display: none; }
-
-        /* Notification Toast */
+        #settings-btn:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
+        .icon { width: 24px; height: 24px; fill: white; }
+        
         #toast {
-            position: fixed; bottom: 40px; left: 50%; 
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: white; 
-            padding: 12px 24px; border-radius: 30px; 
-            font-size: 14px; opacity: 0; 
-            pointer-events: none; transition: opacity 0.3s; 
-            z-index: 200; border: 1px solid rgba(255,255,255,0.1);
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.8); color: #fff;
+            padding: 10px 24px; border-radius: 50px; font-size: 14px;
+            border: 1px solid rgba(255,255,255,0.15);
+            opacity: 0; transition: opacity 0.3s; z-index: 200; pointer-events: none;
+            display: flex; align-items: center; gap: 8px;
         }
+        .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; }
+
+        #file-input { display: none; }
     </style>
 </head>
 <body>
 
     <div id="wallpaper-engine">
-        <img id="bg-img" class="smart-bg" src="" alt="">
+        <img id="bg-img" class="smart-bg">
         <video id="bg-vid" class="smart-bg" loop muted playsinline></video>
     </div>
 
-    <button id="settings-trigger">
-        <svg class="gear-icon" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.49l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-    </button>
-    
-    <input type="file" id="file-picker" accept="image/*,video/*">
-    <div id="toast">Ready</div>
+    <button id="settings-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22l-1.92 3.32c-.12.22-.07.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
+    <input type="file" id="file-input" accept="image/*,video/*">
+    <div id="toast"><div class="status-dot"></div><span id="toast-msg">System Ready</span></div>
 
     <script>
-        const btn = document.getElementById('settings-trigger');
-        const picker = document.getElementById('file-picker');
-        const imgEl = document.getElementById('bg-img');
-        const vidEl = document.getElementById('bg-vid');
-        const toastEl = document.getElementById('toast');
+        // ================= CONFIGURATION =================
+        const REPO = {
+            user: "xapkss",             // GitHub Username
+            repo: "ultra-smart-os",     // Repo Name
+            branch: "main",
+            addonFile: "addon-wallpaper.js" // JS File in Repo
+        };
 
-        // Open Gallery
-        btn.addEventListener('click', () => picker.click());
+        // ================= GLOBAL API (For Addons) =================
+        // This 'UltraOS' object is what your addon-wallpaper.js will talk to!
+        window.UltraOS = {
+            setWallpaper: (url, type = 'image') => {
+                applyMedia(url, type);
+                notify("Addon Applied Wallpaper");
+            },
+            notify: (msg) => notify(msg),
+            log: (msg) => console.log(`[UltraOS Addon]: ${msg}`)
+        };
 
-        // File Selected
-        picker.addEventListener('change', function(e) {
-            if (this.files && this.files[0]) {
-                const file = this.files[0];
-                showToast("⏳ Loading media...");
-                
-                // Use FileReader (More reliable for Gallery selection)
-                const reader = new FileReader();
+        // ================= SYSTEM VARIABLES =================
+        const ui = {
+            img: document.getElementById('bg-img'),
+            vid: document.getElementById('bg-vid'),
+            btn: document.getElementById('settings-btn'),
+            picker: document.getElementById('file-input'),
+            toast: document.getElementById('toast'),
+            msg: document.getElementById('toast-msg')
+        };
+        let db;
 
-                reader.onload = function(e) {
-                    const src = e.target.result;
-
-                    // --- VIDEO ENGINE ---
-                    if (file.type.startsWith('video/')) {
-                        // 3.5 MB Limit
-                        if (file.size > 3.5 * 1024 * 1024) {
-                            showToast("❌ Video too big! (Max 3.5MB)");
-                            return;
-                        }
-                        
-                        imgEl.classList.remove('active-bg');
-                        vidEl.src = src;
-                        vidEl.onloadeddata = () => {
-                            vidEl.classList.add('active-bg');
-                            vidEl.play().catch(() => showToast("Tap screen to play video"));
-                            showToast("🎬 Live Wallpaper Set");
-                        };
-                    } 
-                    // --- IMAGE ENGINE ---
-                    else if (file.type.startsWith('image/')) {
-                        vidEl.classList.remove('active-bg');
-                        vidEl.pause();
-                        
-                        imgEl.src = src;
-                        imgEl.onload = () => {
-                            imgEl.classList.add('active-bg');
-                            showToast("🖼️ Wallpaper Set");
-                        };
-                    }
-                };
-
-                reader.readAsDataURL(file); // Start reading
-            }
+        // ================= KERNEL BOOT =================
+        initDB().then(() => {
+            // Priority 1: Check Local Storage (User Preference)
+            loadUserPreference().then(hasLocal => {
+                if (!hasLocal) {
+                    // Priority 2: If no local file, Load Addon from GitHub
+                    loadCloudAddon();
+                } else {
+                    notify("User Preferences Loaded");
+                }
+            });
         });
 
-        function showToast(msg) {
-            toastEl.textContent = msg;
-            toastEl.style.opacity = '1';
-            setTimeout(() => toastEl.style.opacity = '0', 3000);
+        // ================= ADDON LOADER (THE MAGIC) =================
+        async function loadCloudAddon() {
+            const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${REPO.addonFile}?t=${Date.now()}`;
+            console.log("🔌 Loading Addon:", url);
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Addon missing");
+                const scriptCode = await response.text();
+                
+                // Securely execute the addon code
+                // The addon should look like: UltraOS.setWallpaper('https://link.png')
+                new Function(scriptCode)(); 
+                
+            } catch (e) {
+                console.error("Addon Failed:", e);
+                notify("⚠️ Addon Offline");
+            }
+        }
+
+        // ================= DATABASE ENGINE =================
+        function initDB() {
+            return new Promise((resolve) => {
+                const req = indexedDB.open("UltraOS_Kernel", 1);
+                req.onupgradeneeded = e => e.target.result.createObjectStore("prefs");
+                req.onsuccess = e => { db = e.target.result; resolve(); };
+            });
+        }
+
+        function loadUserPreference() {
+            return new Promise(resolve => {
+                const tx = db.transaction("prefs", "readonly");
+                const req = tx.objectStore("prefs").get("bg_media");
+                req.onsuccess = () => {
+                    if (req.result) {
+                        const url = URL.createObjectURL(req.result.file);
+                        applyMedia(url, req.result.type);
+                        resolve(true);
+                    } else {
+                        resolve(false);
+                    }
+                };
+            });
+        }
+
+        function saveUserPreference(file) {
+            const type = file.type.startsWith('video/') ? 'video' : 'image';
+            const tx = db.transaction("prefs", "readwrite");
+            tx.objectStore("prefs").put({ id: "bg_media", file: file, type: type }, "bg_media");
+            
+            const url = URL.createObjectURL(file);
+            applyMedia(url, type);
+            notify("💾 Saved to System");
+        }
+
+        // ================= MEDIA ENGINE =================
+        function applyMedia(url, type) {
+            if (type === 'video') {
+                ui.img.classList.remove('active-bg');
+                ui.vid.src = url;
+                ui.vid.classList.add('active-bg');
+                ui.vid.play().catch(e => console.log("Autoplay blocked"));
+            } else {
+                ui.vid.classList.remove('active-bg');
+                ui.vid.pause();
+                ui.img.src = url;
+                ui.img.classList.add('active-bg');
+            }
+        }
+
+        // ================= UI INTERACTION =================
+        ui.btn.addEventListener('click', () => ui.picker.click());
+        
+        ui.picker.addEventListener('change', (e) => {
+            if (e.target.files[0]) saveUserPreference(e.target.files[0]);
+        });
+
+        function notify(text) {
+            ui.msg.textContent = text;
+            ui.toast.style.opacity = '1';
+            setTimeout(() => ui.toast.style.opacity = '0', 3000);
         }
     </script>
 </body>
