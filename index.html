@@ -2,22 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Smart OS (Final)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ultra Smart OS (Locked)</title>
     <style>
-        /* --- CORE VISUALS --- */
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* --- 🛠️ FIX 2: CORE VISUALS (Native App Feel) --- */
         body, html { 
-            width: 100%; height: 100%; 
-            background: #000; overflow: hidden; 
+            width: 100vw; 
+            height: 100dvh; /* Mobile Address Bar Fix */
+            margin: 0; padding: 0;
+            background: #000; 
+            overflow: hidden; /* Scroll Killed */
             font-family: 'Segoe UI', sans-serif; 
+            
+            /* Gestures Blocked */
+            touch-action: none; 
+            overscroll-behavior: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         /* --- LAYERS --- */
-        #wallpaper-engine { position: fixed; inset: 0; z-index: 1; }
+        #wallpaper-engine { 
+            position: fixed; inset: 0; z-index: 1; 
+            pointer-events: none; /* Click pass-through */
+        }
         .smart-bg { 
             position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; opacity: 0; transition: opacity 0.8s ease; 
+            object-fit: cover; /* Smart Crop */
+            object-position: center;
+            opacity: 0; transition: opacity 0.8s ease; 
         }
         .active-bg { opacity: 1; }
 
@@ -95,29 +108,24 @@
         };
         let db;
 
-        // ================= SMART BOOT SEQUENCE (FIXED) =================
+        // ================= SMART BOOT SEQUENCE =================
         initDB().then(() => {
             loadUserPreference().then(hasLocalWallpaper => {
                 
                 let loadList = [];
 
                 if (hasLocalWallpaper) {
-                    // Scenario A: User ne apni photo lagayi hai.
-                    // Action: Sirf WIDGETS load karo, Wallpaper Addon hata do.
+                    // Local Wallpaper Found: Remove 'addon-wallpaper.js' ONLY
                     console.log("📂 Local Wallpaper Found - Skipping Cloud Wallpaper");
                     notify("Personal Setup Loaded");
-                    
-                    // Filter list: Remove 'addon-wallpaper.js'
                     loadList = REPO.addons.filter(file => file !== "addon-wallpaper.js");
-
                 } else {
-                    // Scenario B: New User.
-                    // Action: Sab kuch load karo (Wallpaper + Widgets).
+                    // No Local Data: Load Everything
                     console.log("☁️ No Local Data - Loading Default Cloud Setup");
                     loadList = REPO.addons;
                 }
 
-                // Final Step: Execute Filtered List
+                // Execute Filtered List
                 loadCloudAddons(loadList);
             });
         });
@@ -125,10 +133,8 @@
         // ================= ADDON LOADER =================
         async function loadCloudAddons(fileList) {
             console.log("🚀 Loading Addons:", fileList);
-            
             for (const file of fileList) {
                 const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
-                
                 try {
                     const response = await fetch(url);
                     if (!response.ok) throw new Error(`${file} missing`);
@@ -158,9 +164,9 @@
                     if (req.result) {
                         const url = URL.createObjectURL(req.result.file);
                         applyMedia(url, req.result.type);
-                        resolve(true); // Yes, local file exists
+                        resolve(true); 
                     } else {
-                        resolve(false); // No local file
+                        resolve(false); 
                     }
                 };
             });
@@ -174,9 +180,6 @@
             const url = URL.createObjectURL(file);
             applyMedia(url, type);
             notify("💾 Setup Saved");
-            
-            // Note: Reloading page might be needed to cleanly swap wallpaper logic, 
-            // but for now, we just apply it immediately.
         }
 
         // ================= MEDIA ENGINE =================
@@ -205,6 +208,30 @@
             ui.toast.style.opacity = '1';
             setTimeout(() => ui.toast.style.opacity = '0', 3000);
         }
+
+        // ================= 🛠️ FIX 3: ANTI-ZOOM GUARD (DESKTOP) =================
+        
+        // 1. Block Keyboard Zoom (Ctrl + / -)
+        document.addEventListener('keydown', function(event) {
+            if ((event.ctrlKey || event.metaKey) && 
+                (event.key === '+' || event.key === '-' || event.key === '=' || event.key === '0')) {
+                event.preventDefault();
+            }
+        });
+
+        // 2. Block Mouse Wheel Zoom (Ctrl + Scroll)
+        document.addEventListener('wheel', function(event) {
+            if (event.ctrlKey) event.preventDefault();
+        }, { passive: false });
+
+        // 3. Block Double Tap Zoom (Touch Devices)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) event.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
     </script>
 </body>
 </html>
