@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Smart OS (Addon Edition)</title>
+    <title>Ultra Smart OS (Multi-Addon)</title>
     <style>
         /* --- CORE VISUALS --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -60,23 +60,26 @@
     <div id="toast"><div class="status-dot"></div><span id="toast-msg">System Ready</span></div>
 
     <script>
-        // ================= CONFIGURATION =================
+        // ================= ⚙️ SYSTEM CONFIG =================
         const REPO = {
             user: "xapkss",             // GitHub Username
             repo: "ultra-smart-os",     // Repo Name
-            branch: "main",
-            addonFile: "addon-wallpaper.js" // JS File in Repo
+            branch: "main",             // Branch Name
+            // 👇 LIST YOUR ADDONS HERE
+            addons: [
+                "addon-wallpaper.js",   // 1. Wallpaper Manager
+                "addon-clock.js"        // 2. Clock Widget
+            ]
         };
 
         // ================= GLOBAL API (For Addons) =================
-        // This 'UltraOS' object is what your addon-wallpaper.js will talk to!
         window.UltraOS = {
             setWallpaper: (url, type = 'image') => {
                 applyMedia(url, type);
-                notify("Addon Applied Wallpaper");
+                notify("Wallpaper Updated");
             },
             notify: (msg) => notify(msg),
-            log: (msg) => console.log(`[UltraOS Addon]: ${msg}`)
+            log: (msg) => console.log(`[UltraOS]: ${msg}`)
         };
 
         // ================= SYSTEM VARIABLES =================
@@ -95,32 +98,48 @@
             // Priority 1: Check Local Storage (User Preference)
             loadUserPreference().then(hasLocal => {
                 if (!hasLocal) {
-                    // Priority 2: If no local file, Load Addon from GitHub
-                    loadCloudAddon();
+                    // Priority 2: Load All Cloud Addons
+                    loadCloudAddons();
                 } else {
-                    notify("User Preferences Loaded");
+                    notify("User Preference Loaded");
+                    // Note: You might still want to load widgets (clock) even if wallpaper is local.
+                    // If you want Clock + Local Wallpaper, enable this line below:
+                    // loadCloudAddons(); 
+                    // (But be careful, addon-wallpaper.js might override local unless coded carefully)
+                    
+                    // For now, let's load ONLY widgets if local wallpaper exists
+                    // We will just skip 'addon-wallpaper.js' in logic if needed, 
+                    // but for simplicity, let's stick to strict priority for now.
+                    
+                    // BETTER LOGIC: Still load addons, but Addon-Wallpaper should respect local state.
+                    // Since we are keeping it simple:
+                    // If local exists, we assume user wants FULL local control.
+                    // To get widgets + local wallpaper, we'd need a smarter addon-wallpaper.js.
+                    // For now, if local exists -> No Cloud Addons run.
                 }
             });
         });
 
-        // ================= ADDON LOADER (THE MAGIC) =================
-        async function loadCloudAddon() {
-            const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${REPO.addonFile}?t=${Date.now()}`;
-            console.log("🔌 Loading Addon:", url);
+        // ================= MULTI-ADDON LOADER =================
+        async function loadCloudAddons() {
+            console.log("🚀 Booting Addon System...");
             
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Addon missing");
-                const scriptCode = await response.text();
+            for (const file of REPO.addons) {
+                const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
                 
-                // Securely execute the addon code
-                // The addon should look like: UltraOS.setWallpaper('https://link.png')
-                new Function(scriptCode)(); 
-                
-            } catch (e) {
-                console.error("Addon Failed:", e);
-                notify("⚠️ Addon Offline");
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(`${file} not found`);
+                    
+                    const scriptCode = await response.text();
+                    new Function(scriptCode)(); // Execute
+                    
+                    console.log(`✅ Loaded: ${file}`);
+                } catch (e) {
+                    console.error(`❌ Failed: ${file}`, e);
+                }
             }
+            notify("System Online");
         }
 
         // ================= DATABASE ENGINE =================
