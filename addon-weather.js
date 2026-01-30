@@ -1,40 +1,41 @@
 /* FILENAME: addon-weather.js
-   PURPOSE: Live Weather Widget (Open-Meteo API)
-   LOCATION: Top-Left (Opposite to Settings)
+   PURPOSE: Live Weather (GPS + IP Fallback)
+   VERSION: 2.0 (Fixed)
 */
 
 (function() {
     // 1. Conflict Check
     if (document.getElementById('os-weather-widget')) return;
 
-    // 2. CSS Injector (Glassmorphism Style)
+    // 2. CSS Injector
     const style = document.createElement('style');
     style.innerHTML = `
         #os-weather-widget {
             position: absolute;
-            top: 20px; left: 20px; /* Opposite to Settings */
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 10px 20px;
+            top: 20px; left: 20px;
+            background: rgba(0, 0, 0, 0.4); /* Darker for better visibility */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px 16px;
             border-radius: 50px;
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             color: white;
             font-family: 'Segoe UI', sans-serif;
             display: flex; align-items: center; gap: 10px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            cursor: default;
-            z-index: 90; /* Settings Button se neeche, Wallpaper se upar */
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 90;
             transition: all 0.3s ease;
-            opacity: 0; animation: fadeIn 1s forwards 0.5s;
+            user-select: none;
         }
-        #os-weather-widget:hover {
-            background: rgba(255, 255, 255, 0.2);
+        #os-weather-widget:hover { background: rgba(0, 0, 0, 0.6); }
+        .w-icon { font-size: 22px; }
+        .w-temp { font-size: 16px; font-weight: 700; }
+        .w-loc { 
+            font-size: 13px; opacity: 0.9; font-weight: 500; 
+            border-left: 1px solid rgba(255,255,255,0.3); 
+            padding-left: 10px; margin-left: 5px;
+            text-transform: capitalize;
         }
-        .w-icon { font-size: 24px; }
-        .w-temp { font-size: 18px; font-weight: 600; }
-        .w-loc { font-size: 14px; opacity: 0.8; font-weight: 400; border-left: 1px solid rgba(255,255,255,0.3); padding-left: 10px; margin-left: 5px;}
-        
-        @keyframes fadeIn { to { opacity: 1; } }
     `;
     document.head.appendChild(style);
 
@@ -42,69 +43,76 @@
     const widget = document.createElement('div');
     widget.id = 'os-weather-widget';
     widget.innerHTML = `
-        <span class="w-icon" id="w-icon">🛰️</span>
-        <span class="w-temp" id="w-temp">--°</span>
-        <span class="w-loc" id="w-city">Locating...</span>
+        <span class="w-icon" id="w-icon">⏳</span>
+        <span class="w-temp" id="w-temp">--</span>
+        <span class="w-loc" id="w-city">Loading...</span>
     `;
+    // Click to refresh manually
+    widget.onclick = () => initWeather();
     document.body.appendChild(widget);
 
-    // 4. LOGIC ENGINE (API)
+    // 4. LOGIC ENGINE (Double-Layer Fetch)
     async function initWeather() {
-        if (!navigator.geolocation) {
-            updateUI("🚫", "--", "No GPS");
-            return;
-        }
+        updateUI("📡", "--", "Locating...");
 
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                fetchWeatherData(lat, lon);
-            },
-            (error) => {
-                console.error("GPS Denied:", error);
-                updateUI("🔒", "--", "Permission Denied");
-                // User ko bolo click karke retry kare
-                widget.onclick = () => initWeather();
+        try {
+            // STEP 1: Try IP Location (Faster & No Permission needed)
+            // Using ipapi.co (Free, No Key)
+            const ipRes = await fetch('https://ipapi.co/json/');
+            
+            if (!ipRes.ok) throw new Error("IP Service Busy");
+            
+            const ipData = await ipRes.json();
+            
+            // Got Location from IP! Now fetch Weather
+            fetchWeatherData(ipData.latitude, ipData.longitude, ipData.city);
+
+        } catch (err) {
+            console.warn("IP Location Failed, trying GPS...", err);
+            
+            // STEP 2: Fallback to GPS (Browser Permission)
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    pos => fetchWeatherData(pos.coords.latitude, pos.coords.longitude, "GPS Loc"),
+                    gpsErr => {
+                        console.error(gpsErr);
+                        updateUI("🚫", "--", "No Location");
+                    }
+                );
+            } else {
+                updateUI("❌", "--", "Not Supported");
             }
-        );
+        }
     }
 
-    async function fetchWeatherData(lat, lon) {
+    async function fetchWeatherData(lat, lon, cityName) {
         try {
-            // A. Get Weather (Open-Meteo - Free/No Key)
-            const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
-            const wRes = await fetch(weatherUrl);
-            const wData = await wRes.json();
+            // Open-Meteo API (Reliable & Free)
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+            
+            const res = await fetch(url);
+            const data = await res.json();
 
-            // B. Get City Name (BigDataCloud - Free Reverse Geocoding)
-            const cityUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
-            const cRes = await fetch(cityUrl);
-            const cData = await cRes.json();
-
-            // C. Process Data
-            const temp = Math.round(wData.current_weather.temperature);
-            const code = wData.current_weather.weathercode;
-            const city = cData.city || cData.locality || "Unknown";
-
-            // D. WMO Code to Emoji Converter
+            const temp = Math.round(data.current_weather.temperature);
+            const code = data.current_weather.weathercode;
             const icon = getWeatherEmoji(code);
 
-            updateUI(icon, `${temp}°C`, city);
+            // Update UI with City Name from IP data
+            updateUI(icon, `${temp}°C`, cityName);
 
         } catch (e) {
-            console.error(e);
-            updateUI("⚠️", "Error", "Offline");
+            console.error("Weather API Error:", e);
+            updateUI("⚠️", "Err", "API Down");
         }
     }
 
     function getWeatherEmoji(code) {
-        if (code === 0) return "☀️"; // Clear
-        if (code >= 1 && code <= 3) return "⛅"; // Partly Cloudy
-        if (code >= 45 && code <= 48) return "🌫️"; // Fog
-        if (code >= 51 && code <= 67) return "🌧️"; // Rain
-        if (code >= 71 && code <= 77) return "❄️"; // Snow
-        if (code >= 95) return "⛈️"; // Thunderstorm
+        if (code === 0) return "☀️";
+        if (code >= 1 && code <= 3) return "⛅";
+        if (code >= 45 && code <= 48) return "🌫️";
+        if (code >= 51 && code <= 67) return "🌧️";
+        if (code >= 71 && code <= 77) return "❄️";
+        if (code >= 95) return "⛈️";
         return "🌤️";
     }
 
@@ -113,13 +121,12 @@
         document.getElementById('w-temp').innerText = temp;
         document.getElementById('w-city').innerText = loc;
         
-        if(window.UltraOS) UltraOS.notify(`Weather: ${temp} in ${loc}`);
+        if(window.UltraOS) UltraOS.log(`Weather Updated: ${loc} ${temp}`);
     }
 
-    // Start Engine
+    // Start
     initWeather();
-
-    // Auto-Refresh every 30 mins
-    setInterval(initWeather, 1800000);
+    // Refresh every 1 hour
+    setInterval(initWeather, 3600000);
 
 })();
