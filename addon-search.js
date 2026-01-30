@@ -164,45 +164,144 @@
         if (e.key === 'Enter') performSearch(input.value);
     });
 
-    // 6. SMART SUGGESTIONS (Auto-Hide Fix)
-    input.addEventListener('input', () => {
-        const query = input.value.trim();
-        
-        // FIX: Agar text khali hai, to turant gayab karo
-        if (!query) {
-            suggestionsBox.style.display = 'none';
-            return;
-        }
+    // 6. SMART AI-LIKE QUOTES SUGGESTIONS (OFFLINE • HUMAN • ADAPTIVE)
 
-        // Fetch Suggestions
-        const script = document.createElement('script');
-        script.src = `https://suggestqueries.google.com/complete/search?client=firefox&q=${query}&callback=handleUltraSuggestions`;
-        document.body.appendChild(script);
-        script.onload = () => script.remove();
-    });
+// === MOOD ENGINE ===
+function getCurrentMood() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 11) return "calm";
+  if (h >= 11 && h < 17) return "motivational";
+  if (h >= 17 && h < 20) return "calm";
+  return "night";
+}
 
-    window.handleUltraSuggestions = (data) => {
-        const results = data[1];
-        if (!results.length || !input.value.trim()) {
-            suggestionsBox.style.display = 'none';
-            return;
-        }
+function getTodayKey() {
+  return new Date().toISOString().slice(0,10);
+}
 
-        suggestionsBox.innerHTML = '';
-        results.slice(0, 5).forEach(text => {
-            const div = document.createElement('div');
-            div.className = 's-item';
-            div.innerHTML = `<span class="s-icon">🔍</span> ${text}`;
-            div.onmousedown = () => performSearch(text); // onmousedown fires before blur
-            suggestionsBox.appendChild(div);
-        });
-        suggestionsBox.style.display = 'flex';
-    };
+// === USER PREFERENCE MEMORY ===
+const USER_MOOD_KEY = "ultra_user_mood";
 
-    function performSearch(query) {
-        if (!query) return;
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-    }
+function getUserMood() {
+  const saved = JSON.parse(localStorage.getItem(USER_MOOD_KEY) || "{}");
+  if (saved.day !== getTodayKey()) return null;
+  return saved.mood || null;
+}
+
+function saveUserMood(mood) {
+  localStorage.setItem(
+    USER_MOOD_KEY,
+    JSON.stringify({ day: getTodayKey(), mood })
+  );
+}
+
+const quotePools = {
+  letters: {
+    A:["Aaj thoda heavy lag raha hai, par tu weak nahi hai","Aage ka rasta dheere khulta hai, trust rakh","Akele rehna bhi ek skill hai","Aaj ka effort silent hai, result loud hoga","Apni pace me chalna bhi jeet hai"],
+    B:["Bas rukna mat, chahe slow ho","Bheed se alag chalna padta hai kuch banne ke liye","Bure din filter jaise hote hain","Break lena theek hai, give up nahi","Bharosa khud pe rakho"],
+    C:["Calm rehna bhi ek power hai","Chhoti progress bhi progress hoti hai","Control emotions, dreams nahi","Confidence shor nahi karta","Chal raha hai, wahi kaafi hai"],
+    D:["Darr ka matlab hai growth start ho rahi hai","Dheere hi sahi, rukna nahi","Dil thak sakta hai, par hausla nahi","Discipline mood ka wait nahi karta","Dreams ko roz thoda paani do"],
+    E:["Energy khatam ho sakti hai, hope nahi","Ek din sab clear lagega","Expect kam, effort zyada","Emotions ko samjho, dabao mat","Easy nahi hai, par worth it hai"],
+    F:["Focus aaj ka kaam","Feelings temporary hoti hain","Failure feedback hota hai","Farak padta hai tu koshish karta hai","Forward hi ek option hai"],
+    G:["Growth silent hoti hai","Galtiyaan teacher hoti hain","Give up ka option mat rakho","Grounded rehna bhi strength hai","Good things take time"],
+    H:["Halka reh, bhaari mat soch","Hard days character banate hain","Himmat matlab dar ke baad bhi chalna","Heal hone ko time lagta hai","Hope chhodna mat"],
+    I:["Itna bhi bura nahi hai jitna lag raha","Improve daily, compare nahi","Inner peace expensive nahi hoti","Intentions saaf rakho","It will make sense later"],
+    J:["Jitna control chhodoge utna halka lagega","Journey perfect nahi hoti","Just keep moving","Jazba zinda rakho","Jeet process follow karti hai"],
+    K:["Khud se baat karna seekho","Kuch cheezein waqt pe chhodni hoti hain","Khamoshi bhi jawab hoti hai","Keep going, even quietly","Khud pe doubt normal hai"],
+    L:["Life straight line nahi hoti","Late hona fail hona nahi","Little wins matter","Light rehna bhi ek art hai","Learn and let go"],
+    M:["Mood nahi, mission follow karo","Man thak jata hai kabhi kabhi","Mehnat dikhti nahi, mehsoos hoti hai","Mind ko rest bhi chahiye","Move at your speed"],
+    N:["Normal feel nahi ho raha? it’s okay","No rush, no pressure","Nazar process pe rakho","Not every day needs victory","Naye din naye chances"],
+    O:["Overthinking signal hai rest ka","One step is enough","Old patterns todna mushkil hota hai","Okay rehna bhi progress hai","Own your pace"],
+    P:["Progress loud nahi hoti","Patience underrated hai","Pressure grow bhi karata hai","Pause bhi strategy hai","Present pe focus rakho"],
+    Q:["Question karna growth hai","Quiet work matters","Quality over noise","Questions clarity laate hain","Quit sirf doubt ko karo"],
+    R:["Rest lena weakness nahi","Routine freedom deta hai","Results time lete hain","Reset bhi zaroori hai","Real growth boring lagti hai"],
+    S:["Slow chalna safe hai","Self-respect first","Strong banna loud nahi hota","Samajh aane me time lagta hai","Stick with it"],
+    T:["Thakna allowed hai","Trust the process","Time sab sikha deta hai","Tension future ka tax hai","Take it easy"],
+    U:["Ups and downs normal hain","Unlearn bhi zaroori hai","Umeed zinda rakho","You’re not behind","Use your energy wisely"],
+    V:["Vibe important hai","Value khud se shuru hoti hai","Victory patient logon ko milti hai","Vision clear rakho","Very human to feel lost"],
+    W:["Waqt lagega, par milega","Worth it hoga","Work quietly","Worry kam karo","Win slow bhi win hai"],
+    X:["Xtra effort aaj ka edge hai","X-factor consistency hai","Xpect setbacks","Xplore calmly","Xhale stress"],
+    Y:["You’re doing better than you think","Yahin se start hota hai","Your pace is valid","Yakeen rakho","You’ll be fine"],
+    Z:["Zindagi rush nahi hai","Zero motivation days bhi part hain","Zyada sochna mat","Zameen pe reh, aasman khulega","Zaroori hai rukna nahi"]
+  },
+  numbers: {
+    0:["Zero se hi sab shuru hota hai 😄","Aaj enjoy karo","Khushi free hai","Muskurana power hai","Light mood best mood"],
+    1:["Ek ho to strong bano 🔥","Leader banne ko awaaz nahi soch chahiye","Khud pe khade raho","Silence powerful hota hai","One step ahead"],
+    2:["Balance rakho 🌿","Thoda enjoy thoda kaam","Mood sahi ho to din apna","Life vibe hai race nahi","Smile more"],
+    3:["Energy high rakho 😄","Masti bhi zaroori hai","Dil halka rakho","Enjoy small things","Positive reh"],
+    4:["Strong base banao","Consistency jeet dilati hai","Mehnat ka number","Stable reh","Solid effort"],
+    5:["Change healthy hota hai","Flow me raho","Refresh yourself","Movement zaroori hai","Life dynamic hai"],
+    6:["Dil se jiyo ❤️","Family vibes strong","Care karna strength hai","Warm reh","Khushi baanto"],
+    7:["Shant reh 🌌","Inner peace priority","Depth matters","Slow and mindful","Soul time"],
+    8:["Power mode on 🔥","Focus sharp rakho","Ambition achhi cheez hai","Rise strong","Boss energy"],
+    9:["Completion ka sukoon","Grateful reh","Cycle complete hota hai","Respect the journey","Smile end tak"]
+  }
+};
+
+const quoteState = {};
+
+// === PICK QUOTES (SMART) ===
+function pickQuotes(key, pool) {
+  const systemMood = getCurrentMood();
+  const userMood = getUserMood();
+  const activeMood = userMood || systemMood;
+
+  let filtered = pool;
+
+  if (activeMood === "night") {
+    filtered = pool.filter(q =>
+      /zindagi|khamosh|raat|shant|andar|alone|slow/i.test(q)
+    );
+    if (filtered.length < 2) filtered = pool;
+  }
+
+  if (!quoteState[key] || quoteState[key].length === 0) {
+    quoteState[key] = [...filtered].sort(() => Math.random() - 0.5);
+  }
+
+  return quoteState[key].splice(0, 2);
+}
+
+// === RENDER ===
+function renderQuotes(val) {
+  const isNum = /^[0-9]/.test(val);
+  const key = isNum ? val[0] : val[0].toUpperCase();
+  const pool = isNum ? quotePools.numbers[key] : quotePools.letters[key];
+  if (!pool) return suggestionsBox.style.display = 'none';
+
+  const quotes = pickQuotes(key, pool);
+  suggestionsBox.innerHTML = '';
+
+  quotes.forEach(q => {
+    const d = document.createElement('div');
+    d.className = 's-item';
+    d.innerHTML = `<span class="s-icon">🔍</span> ${q}`;
+    d.onmousedown = () => showGoodChoice(val);
+    suggestionsBox.appendChild(d);
+  });
+
+  suggestionsBox.style.display = 'flex';
+}
+
+// === CLICK FEEDBACK ===
+function showGoodChoice(val) {
+  saveUserMood(getCurrentMood());
+  suggestionsBox.innerHTML =
+    `<div class="s-item"><span class="s-icon">✨</span> Good Choice 🥰</div>`;
+  setTimeout(() => renderQuotes(val), 500);
+}
+
+// === INPUT LISTENER ===
+input.addEventListener('input', () => {
+  const v = input.value.trim();
+  if (!v) return suggestionsBox.style.display = 'none';
+
+  if (/^[a-zA-Z]+$/.test(v) || /^[0-9]+$/.test(v)) {
+    renderQuotes(v);
+  } else {
+    suggestionsBox.style.display = 'none';
+  }
+});
 
     // 7. VOICE (Same logic)
     if ('webkitSpeechRecognition' in window) {
