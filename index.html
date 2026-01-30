@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ultra Smart OS (Multi-Addon)</title>
+    <title>Ultra Smart OS (Final)</title>
     <style>
         /* --- CORE VISUALS --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -62,19 +62,18 @@
     <script>
         // ================= ⚙️ SYSTEM CONFIG =================
         const REPO = {
-            user: "xapkss",             // GitHub Username
-            repo: "ultra-smart-os",     // Repo Name
-            branch: "main",             // Branch Name
-            // 👇 LIST YOUR ADDONS HERE
+            user: "xapkss",             
+            repo: "ultra-smart-os",     
+            branch: "main",             
             addons: [
-                "addon-wallpaper.js",   // 1. Wallpaper Manager
-                "addon-clock.js",      // 2. Clock Widget
-                "addon-weather.js",     //3. Weather widget
-                "addon-search.js"       //4.Search baar widget
+                "addon-wallpaper.js",   // Base Wallpaper
+                "addon-clock.js",       // Widgets
+                "addon-weather.js",
+                "addon-search.js"
             ]
         };
 
-        // ================= GLOBAL API (For Addons) =================
+        // ================= GLOBAL API =================
         window.UltraOS = {
             setWallpaper: (url, type = 'image') => {
                 applyMedia(url, type);
@@ -84,7 +83,7 @@
             log: (msg) => console.log(`[UltraOS]: ${msg}`)
         };
 
-        // ================= SYSTEM VARIABLES =================
+        // ================= VARIABLES =================
         const ui = {
             img: document.getElementById('bg-img'),
             vid: document.getElementById('bg-vid'),
@@ -95,53 +94,50 @@
         };
         let db;
 
-        // ================= KERNEL BOOT =================
+        // ================= SMART BOOT SEQUENCE (FIXED) =================
         initDB().then(() => {
-            // Priority 1: Check Local Storage (User Preference)
-            loadUserPreference().then(hasLocal => {
-                if (!hasLocal) {
-                    // Priority 2: Load All Cloud Addons
-                    loadCloudAddons();
+            loadUserPreference().then(hasLocalWallpaper => {
+                
+                let loadList = [];
+
+                if (hasLocalWallpaper) {
+                    // Scenario A: User ne apni photo lagayi hai.
+                    // Action: Sirf WIDGETS load karo, Wallpaper Addon hata do.
+                    console.log("📂 Local Wallpaper Found - Skipping Cloud Wallpaper");
+                    notify("Personal Setup Loaded");
+                    
+                    // Filter list: Remove 'addon-wallpaper.js'
+                    loadList = REPO.addons.filter(file => file !== "addon-wallpaper.js");
+
                 } else {
-                    notify("User Preference Loaded");
-                    // Note: You might still want to load widgets (clock) even if wallpaper is local.
-                    // If you want Clock + Local Wallpaper, enable this line below:
-                    // loadCloudAddons(); 
-                    // (But be careful, addon-wallpaper.js might override local unless coded carefully)
-                    
-                    // For now, let's load ONLY widgets if local wallpaper exists
-                    // We will just skip 'addon-wallpaper.js' in logic if needed, 
-                    // but for simplicity, let's stick to strict priority for now.
-                    
-                    // BETTER LOGIC: Still load addons, but Addon-Wallpaper should respect local state.
-                    // Since we are keeping it simple:
-                    // If local exists, we assume user wants FULL local control.
-                    // To get widgets + local wallpaper, we'd need a smarter addon-wallpaper.js.
-                    // For now, if local exists -> No Cloud Addons run.
+                    // Scenario B: New User.
+                    // Action: Sab kuch load karo (Wallpaper + Widgets).
+                    console.log("☁️ No Local Data - Loading Default Cloud Setup");
+                    loadList = REPO.addons;
                 }
+
+                // Final Step: Execute Filtered List
+                loadCloudAddons(loadList);
             });
         });
 
-        // ================= MULTI-ADDON LOADER =================
-        async function loadCloudAddons() {
-            console.log("🚀 Booting Addon System...");
+        // ================= ADDON LOADER =================
+        async function loadCloudAddons(fileList) {
+            console.log("🚀 Loading Addons:", fileList);
             
-            for (const file of REPO.addons) {
+            for (const file of fileList) {
                 const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
                 
                 try {
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error(`${file} not found`);
-                    
-                    const scriptCode = await response.text();
-                    new Function(scriptCode)(); // Execute
-                    
-                    console.log(`✅ Loaded: ${file}`);
+                    if (!response.ok) throw new Error(`${file} missing`);
+                    const code = await response.text();
+                    new Function(code)(); 
+                    console.log(`✅ Active: ${file}`);
                 } catch (e) {
-                    console.error(`❌ Failed: ${file}`, e);
+                    console.error(`❌ Error: ${file}`, e);
                 }
             }
-            notify("System Online");
         }
 
         // ================= DATABASE ENGINE =================
@@ -161,9 +157,9 @@
                     if (req.result) {
                         const url = URL.createObjectURL(req.result.file);
                         applyMedia(url, req.result.type);
-                        resolve(true);
+                        resolve(true); // Yes, local file exists
                     } else {
-                        resolve(false);
+                        resolve(false); // No local file
                     }
                 };
             });
@@ -176,7 +172,10 @@
             
             const url = URL.createObjectURL(file);
             applyMedia(url, type);
-            notify("💾 Saved to System");
+            notify("💾 Setup Saved");
+            
+            // Note: Reloading page might be needed to cleanly swap wallpaper logic, 
+            // but for now, we just apply it immediately.
         }
 
         // ================= MEDIA ENGINE =================
@@ -196,7 +195,6 @@
 
         // ================= UI INTERACTION =================
         ui.btn.addEventListener('click', () => ui.picker.click());
-        
         ui.picker.addEventListener('change', (e) => {
             if (e.target.files[0]) saveUserPreference(e.target.files[0]);
         });
