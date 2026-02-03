@@ -1,13 +1,12 @@
 /* FILENAME: addon-apps.js
-   PURPOSE: Cloud Gallery (Thumbnails Restored + Pro Features)
-   VERSION: 4.1 (Video Fix)
+   PURPOSE: Cloud Gallery (Download Button Fixed + Pro Features)
+   VERSION: 4.2 (Download Fix)
 */
 
 (function () {
 
     // ============================================================
     // ⚙️ CONFIGURATION
-    // (Aapka latest working URL yahan daal diya hai)
     const API_URL = "https://script.google.com/macros/s/AKfycbz01UOWLY2OPvc5-lYzFpRBLajkZ5gxli-yaGxJ4yINdedkc_EZ3-kK66KjO1pAoPWt/exec";
     // ============================================================
 
@@ -76,7 +75,7 @@
             cursor: pointer; border: 1px solid rgba(255,255,255,0.05);
         }
         
-        /* THUMBNAILS (Restored Logic) */
+        /* THUMBNAILS */
         .gal-thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
         
         /* VIDEO BADGE */
@@ -86,7 +85,7 @@
             padding: 3px 6px; border-radius: 4px; font-size: 9px; color: white; font-weight: 700;
         }
 
-        /* ACTIONS */
+        /* ACTIONS (Grid Hover) */
         .gal-actions {
             position: absolute; bottom: 0; left: 0; width: 100%;
             padding: 8px; display: flex; gap: 6px;
@@ -102,7 +101,7 @@
         .btn-apply { background: #4285f4; color: white; }
         .btn-dl { background: rgba(255,255,255,0.15); color: white; }
 
-        /* PREVIEW */
+        /* PREVIEW POPUP */
         #gal-preview {
             position: fixed; inset: 0; background: rgba(0,0,0,0.95);
             z-index: 3000; display: none; flex-direction: column;
@@ -118,8 +117,12 @@
             max-width: 100%; max-height: 100%; object-fit: contain;
         }
         .gal-preview-actions { margin-top: 20px; display: flex; gap: 15px; }
-        .p-btn { padding: 10px 20px; border-radius: 50px; border: none; font-weight: 700; cursor: pointer; color: white; }
-        .p-apply { background: #4285f4; } .p-close { background: #333; }
+        
+        .p-btn { padding: 10px 20px; border-radius: 50px; border: none; font-weight: 700; cursor: pointer; color: white; font-size: 14px; }
+        .p-apply { background: #4285f4; } 
+        .p-dl { background: rgba(255,255,255,0.2); } /* New Download Style */
+        .p-close { background: #333; }
+        
         .gal-loader { color: #888; text-align: center; margin-top: 50px; grid-column: 1 / -1; }
     `;
     document.head.appendChild(style);
@@ -135,10 +138,12 @@
 
     const preview = document.createElement('div');
     preview.id = 'gal-preview';
+    // ✅ Added Download Button (p-dl) back here
     preview.innerHTML = `
         <div class="gal-preview-media" id="gal-preview-media"></div>
         <div class="gal-preview-actions">
             <button class="p-btn p-apply">✨ APPLY</button>
+            <button class="p-btn p-dl">⬇</button>
             <button class="p-btn p-close">CLOSE</button>
         </div>
     `;
@@ -166,8 +171,7 @@
                 const item = document.createElement('div');
                 item.className = 'gal-item';
                 
-                // ✅ THUMBNAIL LOGIC RESTORED (Image Tag for Videos too)
-                // Kyunki aapki API thumbnail URL bhej rahi hai
+                // THUMBNAIL LOGIC
                 item.innerHTML = `
                     <img src="${file.url}" class="gal-thumb" loading="lazy">
                     <span class="gal-type">${file.type === 'video' ? '🎥' : '🖼️'}</span>
@@ -220,7 +224,11 @@
             c.innerHTML = `<img src="${file.url}">`;
         }
         preview.classList.add('open');
+        
+        // Button Logic
         preview.querySelector('.p-apply').onclick = () => { applyWallpaper(file); closePreview(); };
+        // ✅ Added Logic for Download Button
+        preview.querySelector('.p-dl').onclick = () => window.open(file.downloadUrl, '_blank');
         preview.querySelector('.p-close').onclick = closePreview;
     }
 
