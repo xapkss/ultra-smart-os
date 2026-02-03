@@ -128,22 +128,45 @@
             });
         });
 
-        // ================= ADDON LOADER =================
+                // ================= SMART ADDON LOADER (WITH OFFLINE CACHE) =================
         async function loadCloudAddons(fileList) {
-            console.log("🚀 Loading Addons:", fileList);
+            console.log("🚀 Booting Addons...");
+            
             for (const file of fileList) {
+                const cacheKey = `ultra_cache_${file}`; // Unique Name for Memory
                 const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
+                
                 try {
+                    // STEP 1: Try to Download from Internet
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error(`${file} missing`);
-                    const code = await response.text();
-                    new Function(code)(); 
-                    console.log(`✅ Active: ${file}`);
+                    if (!response.ok) throw new Error("Network Error");
+                    
+                    const scriptCode = await response.text();
+                    
+                    // STEP 2: Save to Memory (Backup for Offline use)
+                    localStorage.setItem(cacheKey, scriptCode);
+                    console.log(`☁️ Online Load: ${file}`);
+                    
+                    // Run Code
+                    new Function(scriptCode)();
+
                 } catch (e) {
-                    console.error(`❌ Error: ${file}`, e);
+                    // STEP 3: Internet Failed? Load from Memory!
+                    console.warn(`⚠️ Offline Mode: Loading ${file} from Cache...`);
+                    
+                    const cachedCode = localStorage.getItem(cacheKey);
+                    
+                    if (cachedCode) {
+                        new Function(cachedCode)(); // Run Saved Code
+                        notify(`Offline Mode: ${file.replace('addon-', '').replace('.js', '')}`);
+                    } else {
+                        console.error(`❌ Fatal: ${file} not found in Cache or Cloud.`);
+                        // Sirf pehli baar internet chahiye, uske baad hamesha chalega
+                    }
                 }
             }
         }
+
 
         // ================= DATABASE ENGINE =================
         function initDB() {
