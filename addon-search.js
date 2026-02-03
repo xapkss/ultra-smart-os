@@ -175,7 +175,7 @@
         if (!quoteState[key] || quoteState[key].length === 0) {
             quoteState[key] = [...pool].sort(() => Math.random() - 0.5);
         }
-        return quoteState[key].splice(0, 5);
+        return quoteState[key].splice(0, 2);
     }
 
     function renderQuotes(val) {
