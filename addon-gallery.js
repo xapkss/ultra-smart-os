@@ -8,7 +8,7 @@
     // ============================================================
     // ⚙️ CONFIGURATION
     // (Aapka latest working URL yahan daal diya hai)
-    const API_URL = "https://script.google.com/macros/s/AKfycbzlXpSODBBo4liswfv6N3KPRDN6W7eXjpjm1UrGNYOZ9TD-YXWtL8hToRZK5WExFx8F/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycby7zPnsrN9uby5Gc8pZwK7FNCKhjo_o7q2AxsKMButY6t_4dj8TtlpmdWY3c8xz0uQ-/exec";
     // ============================================================
 
     let isDataLoaded = false;
