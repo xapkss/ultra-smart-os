@@ -5,7 +5,7 @@
 (function() {
     // ============================================================
     // URL WEB APP SCRIPT:
-    const API_URL = "https://script.google.com/macros/s/AKfycbx2IG-pce6y4tL3jQCR4sCL77ovosDq_t7r0tRUr1v7hgVgr5P4W2V_OZaP_r2b5Qo/exec"; 
+    const API_URL = "https://script.google.com/macros/s/AKfycbzlXpSODBBo4liswfv6N3KPRDN6W7eXjpjm1UrGNYOZ9TD-YXWtL8hToRZK5WExFx8F/exec"; 
     // ============================================================
 
     // 1. DOCK INTEGRATION (Icon add karna)
