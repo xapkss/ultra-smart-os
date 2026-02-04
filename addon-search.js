@@ -1,242 +1,279 @@
-/* FILENAME: addon-search.js
-   PURPOSE: ULTRA Search Widget (Glassmorphism HUD + AI Quotes)
-   VERSION: 3.1 (Syntax Fixed)
-*/
+/* =========================================================
+   ULTRA GLASS SEARCH — VOICE EDITION (AUTO-RESPONSIVE)
+   ========================================================= */
 
-(function() {
-    // 1. Check Conflicts
-    if (document.getElementById('os-search-widget')) return;
+(function () {
+    // Prevent duplicate injection
+    if (document.getElementById("os-search-widget")) return;
 
-    // 2. ULTRA CSS (Cyber-Glass Design)
-    const style = document.createElement('style');
-    style.innerHTML = `
-        /* --- MAIN BAR --- */
-        #os-search-widget {
-            position: fixed;
-            top: 20%; left: 50%;
-            transform: translateX(-50%);
-            width: 90%; max-width: 650px;
-            height: 60px;
-            background: rgba(15, 15, 15, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-            display: flex; align-items: center;
-            padding: 0 20px;
-            z-index: 999;
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            cursor: grab;
-        }
+    /* ================= CSS ================= */
+    const style = document.createElement("style");
+    style.textContent = `
+    /* --- Base Variables & Reset --- */
+    #os-search-widget-wrapper * {
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* --- Main Widget (Glassmorphism & Auto-Responsive) --- */
+    #os-search-widget {
+        position: fixed;
+        top: 20%;
+        left: 50%;
+        transform: translateX(-50%); 
         
-        #os-search-widget.focused {
-            background: rgba(15, 15, 15, 0.8);
-            border-color: rgba(66, 133, 244, 0.5);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(66, 133, 244, 0.2);
-        }
+        /* AUTO-RESPONSIVE WIDTH LOGIC */
+        width: 90%;           /* Mobile par 90% width lega (Compact) */
+        max-width: 650px;     /* Desktop par 650px se zyada nahi failega (Wide) */
+        
+        height: 64px;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 9999;
 
-        #os-search-widget:active { cursor: grabbing; scale: 0.98; }
-        .g-icon { width: 28px; height: 28px; margin-right: 15px; opacity: 0.8; transition: 0.3s; fill: #fff; }
-        #os-search-widget:hover .g-icon { fill: #4285F4; opacity: 1; }
+        /* GLASSMORPHISM STYLE */
+        background: rgba(30, 30, 30, 0.65);
+        backdrop-filter: blur(24px) saturate(180%);
+        -webkit-backdrop-filter: blur(24px) saturate(180%);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.4), 
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        
+        border-radius: 20px;
+        transition: transform 0.1s;
+        color: #fff;
+    }
 
-        #os-search-input {
-            flex: 1; border: none; outline: none;
-            background: transparent;
-            font-size: 20px; color: #fff;
-            font-weight: 300; letter-spacing: 0.5px;
-            font-family: 'Segoe UI', sans-serif;
-            height: 100%;
-        }
-        #os-search-input::placeholder { color: rgba(255,255,255,0.4); }
+    /* Drag Handle Cursor */
+    #os-search-widget.draggable { cursor: grab; }
+    #os-search-widget.dragging {
+        cursor: grabbing;
+        transform: scale(0.99) !important;
+        user-select: none;
+    }
 
-        #os-mic-btn {
-            width: 24px; height: 24px; cursor: pointer;
-            fill: rgba(255,255,255,0.6); margin-left: 15px;
-            transition: 0.3s;
-        }
-        #os-mic-btn:hover { fill: #fff; transform: scale(1.1); }
-        #os-mic-btn.listening { animation: pulse 1.5s infinite; fill: #ea4335; }
+    /* --- Input Field --- */
+    #os-search-input {
+        flex: 1;
+        height: 100%;
+        background: transparent;
+        border: none;
+        outline: none;
+        font-size: 18px;
+        color: rgba(255, 255, 255, 0.95);
+        font-weight: 400;
+        letter-spacing: 0.5px;
+    }
+    #os-search-input::placeholder { color: rgba(255, 255, 255, 0.4); transition: color 0.3s;}
 
-        #os-suggestions {
-            position: absolute; top: 70px; left: 0;
-            width: 100%; 
-            background: rgba(20, 20, 20, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
-            backdrop-filter: blur(25px);
-            overflow: hidden; display: none;
-            flex-direction: column;
-        }
-        .s-item {
-            padding: 14px 20px; cursor: pointer;
-            font-size: 16px; color: rgba(255,255,255,0.9);
-            display: flex; align-items: center; gap: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            transition: background 0.2s;
-        }
-        .s-item:last-child { border-bottom: none; }
-        .s-item:hover { background: rgba(255,255,255,0.1); padding-left: 25px; }
-        .s-icon { font-size: 14px; opacity: 0.5; }
+    /* --- Mic Button 🎤 --- */
+    #os-mic-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: 0.2s all ease;
+        margin-left: 10px;
+        background: rgba(255,255,255,0.05);
+    }
+    #os-mic-btn:hover {
+        background: rgba(255,255,255,0.15);
+        opacity: 1;
+    }
+    #os-mic-btn svg {
+        fill: #fff;
+        width: 20px;
+        height: 20px;
+        transition: fill 0.3s;
+    }
 
-        @keyframes pulse { 0% { scale: 1; } 50% { scale: 1.2; } 100% { scale: 1; } }
+    /* Listening State Animation */
+    #os-mic-btn.listening {
+        background: rgba(234, 67, 53, 0.2); /* Reddish tint */
+        animation: micPulse 1.5s infinite;
+    }
+    #os-mic-btn.listening svg { fill: #ea4335; /* Google Red */ }
+    
+    @keyframes micPulse {
+        0% { box-shadow: 0 0 0 0 rgba(234, 67, 53, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(234, 67, 53, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(234, 67, 53, 0); }
+    }
+
+
+    /* --- Suggestions Dropdown --- */
+    #os-suggestions {
+        position: absolute;
+        top: 72px; left: 0; width: 100%;
+        display: none;
+        flex-direction: column;
+        background: rgba(25, 25, 25, 0.85);
+        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    }
+    .s-item {
+        padding: 14px 20px;
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .s-item:last-child { border-bottom: none; }
+    .s-item:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
     `;
     document.head.appendChild(style);
 
-    // 3. HTML Structure
-    const widget = document.createElement('div');
-    widget.id = 'os-search-widget';
-    widget.innerHTML = `
-        <svg class="g-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-        <input type="text" id="os-search-input" placeholder="Type to search..." autocomplete="off">
-        <svg id="os-mic-btn" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
-        <div id="os-suggestions"></div>
-    `;
-    document.body.appendChild(widget);
+    /* ================= HTML STRUCTURE ================= */
+    const wrapper = document.createElement("div");
+    wrapper.id = "os-search-widget-wrapper";
+    
+    // Main Widget HTML (Settings removed, Mic added)
+    wrapper.innerHTML = `
+        <div id="os-search-widget" class="draggable">
+            <input id="os-search-input" type="text" placeholder="Search or speak..." autocomplete="off" />
+            
+            <div id="os-mic-btn" title="Voice Search">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+            </div>
 
-    // 4. RESTORE & DRAG LOGIC
-    const savedPos = localStorage.getItem('os_search_pos');
-    if (savedPos) {
-        const pos = JSON.parse(savedPos);
-        widget.style.top = pos.top;
-        widget.style.left = pos.left;
-        widget.style.transform = 'none';
+            <div id="os-suggestions"></div>
+        </div>
+    `;
+    
+    document.body.appendChild(wrapper);
+
+    /* ================= ELEMENTS ================= */
+    const widget = document.getElementById("os-search-widget");
+    const input = document.getElementById("os-search-input");
+    const suggestions = document.getElementById("os-suggestions");
+    const micBtn = document.getElementById("os-mic-btn");
+
+    /* ================= VOICE SEARCH LOGIC 🎤 ================= */
+    // Check browser support for Web Speech API
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false; // Stop after one sentence
+        recognition.interimResults = false;
+        recognition.lang = 'en-US'; // Default language
+
+        micBtn.addEventListener('click', () => {
+            if (micBtn.classList.contains('listening')) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+
+        recognition.onstart = () => {
+            micBtn.classList.add('listening');
+            input.placeholder = "Listening...";
+            input.focus();
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            input.value = transcript;
+            // Manually trigger input event so suggestions logic runs
+            input.dispatchEvent(new Event('input'));
+            
+            micBtn.classList.remove('listening');
+            input.placeholder = "Search or speak...";
+        };
+
+        recognition.onend = () => {
+            micBtn.classList.remove('listening');
+            if(input.placeholder === "Listening...") {
+                 input.placeholder = "Search or speak...";
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.log("Speech recognition error: " + event.error);
+            micBtn.classList.remove('listening');
+            input.placeholder = "Error. Try again.";
+            setTimeout(() => { input.placeholder = "Search or speak..."; }, 2000);
+        };
+
+    } else {
+        // If speech API is not supported by the browser, hide the mic button
+        micBtn.style.display = 'none';
+        input.placeholder = "Search...";
+        console.warn("Web Speech API not supported in this browser.");
     }
 
-    const input = document.getElementById('os-search-input');
-    const mic = document.getElementById('os-mic-btn');
-    const suggestionsBox = document.getElementById('os-suggestions');
 
-    // Drag Logic
-    let isDragging = false, startX, startY, initialLeft, initialTop;
-    widget.addEventListener('mousedown', startDrag);
-    widget.addEventListener('touchstart', startDrag, {passive: false});
+    /* ================= DRAG LOGIC (Same as before) ================= */
+    let isDragging = false;
+    let offset = { x: 0, y: 0 };
+
+    const preventSelect = (e) => e.preventDefault();
 
     function startDrag(e) {
-        if (e.target === input || e.target === mic) return;
+        // Ignore if clicking input or mic button
+        if (e.target === input || e.target.closest('#os-mic-btn')) return;
+
         isDragging = true;
-        const clientX = e.clientX || e.touches[0].clientX;
-        const clientY = e.clientY || e.touches[0].clientY;
-        startX = clientX; startY = clientY;
+        widget.classList.add('dragging');
+        
         const rect = widget.getBoundingClientRect();
-        initialLeft = rect.left; initialTop = rect.top;
-        widget.style.transform = 'none';
-        widget.style.left = initialLeft + 'px'; widget.style.top = initialTop + 'px';
-        document.addEventListener('mousemove', onDrag);
-        document.addEventListener('touchmove', onDrag, {passive: false});
-        document.addEventListener('mouseup', stopDrag);
-        document.addEventListener('touchend', stopDrag);
-    }
-
-    function onDrag(e) {
-        if (!isDragging) return;
-        e.preventDefault();
         const clientX = e.clientX || e.touches[0].clientX;
         const clientY = e.clientY || e.touches[0].clientY;
-        widget.style.left = `${initialLeft + (clientX - startX)}px`;
-        widget.style.top = `${initialTop + (clientY - startY)}px`;
+
+        offset.x = clientX - rect.left;
+        offset.y = clientY - rect.top;
+
+        const computedStyle = window.getComputedStyle(widget);
+        if (computedStyle.transform !== 'none') {
+            widget.style.left = rect.left + 'px';
+            widget.style.top = rect.top + 'px';
+            widget.style.transform = 'none';
+        }
+
+        document.addEventListener('mousemove', moveDrag);
+        document.addEventListener('touchmove', moveDrag, { passive: false });
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+        document.addEventListener('selectstart', preventSelect);
     }
 
-    function stopDrag() {
+    function moveDrag(e) {
         if (!isDragging) return;
+        const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+        const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+        widget.style.left = (clientX - offset.x) + 'px';
+        widget.style.top = (clientY - offset.y) + 'px';
+        if(e.preventDefault) e.preventDefault(); 
+    }
+
+    function endDrag() {
         isDragging = false;
-        document.removeEventListener('mousemove', onDrag);
-        document.removeEventListener('touchmove', onDrag);
-        localStorage.setItem('os_search_pos', JSON.stringify({ top: widget.style.top, left: widget.style.left }));
+        widget.classList.remove('dragging');
+        document.removeEventListener('mousemove', moveDrag);
+        document.removeEventListener('touchmove', moveDrag);
+        document.removeEventListener('mouseup', endDrag);
+        document.removeEventListener('touchend', endDrag);
+        document.removeEventListener('selectstart', preventSelect);
     }
 
-    // 5. SEARCH LOGIC
-    input.addEventListener('focus', () => widget.classList.add('focused'));
-    input.addEventListener('blur', () => {
-        widget.classList.remove('focused');
-        setTimeout(() => suggestionsBox.style.display = 'none', 200);
-    });
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') performSearch(input.value);
-    });
+    widget.addEventListener('mousedown', startDrag);
+    widget.addEventListener('touchstart', startDrag, { passive: false });
 
-    function performSearch(query) {
-        if (!query) return;
-        window.location.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-    }
-
-    // 6. SMART QUOTES LOGIC (FIXED)
-    function getCurrentMood() {
-        const h = new Date().getHours();
-        if (h >= 5 && h < 11) return "calm";
-        if (h >= 11 && h < 17) return "motivational";
-        if (h >= 17 && h < 20) return "calm";
-        return "night";
-    }
-
-    const quoteState = {};
-
-    function pickQuotes(key, pool) {
-        if (!quoteState[key] || quoteState[key].length === 0) {
-            quoteState[key] = [...pool].sort(() => Math.random() - 0.5);
-        }
-        return quoteState[key].splice(0, 2);
-    }
-
-    function renderQuotes(val) {
-        const isNum = /^[0-9]/.test(val);
-        const key = isNum ? val[0] : val[0].toUpperCase();
-        
-        // Safety Check
-        if (!quotePools) return; 
-        
-        const pool = isNum ? (quotePools.numbers[key]) : (quotePools.letters[key]);
-        if (!pool) return suggestionsBox.style.display = 'none';
-
-        const quotes = pickQuotes(key, pool);
-        suggestionsBox.innerHTML = '';
-
-        quotes.forEach(q => {
-            const d = document.createElement('div');
-            d.className = 's-item';
-            d.innerHTML = `<span class="s-icon">🔍</span> ${q}`;
-            d.onmousedown = () => {
-                suggestionsBox.innerHTML = `<div class="s-item"><span class="s-icon">✨</span> Good Choice</div>`;
-            };
-            suggestionsBox.appendChild(d);
-        });
-        suggestionsBox.style.display = 'flex';
-    }
-
-    input.addEventListener('input', () => {
-        const v = input.value.trim();
-        if (!v) return suggestionsBox.style.display = 'none';
-
-        if (/^[a-zA-Z]+$/.test(v) || /^[0-9]+$/.test(v)) {
-            renderQuotes(v);
-        } else {
-            // If typing normal words, use Google Suggestions
-            const script = document.createElement('script');
-            script.src = `https://suggestqueries.google.com/complete/search?client=firefox&q=${v}&callback=handleUltraSuggestions`;
-            document.body.appendChild(script);
-        }
-    });
-
-    window.handleUltraSuggestions = (data) => {
-        const results = data[1];
-        if (!results.length || !input.value.trim()) return suggestionsBox.style.display = 'none';
-        suggestionsBox.innerHTML = '';
-        results.slice(0, 5).forEach(text => {
-            const div = document.createElement('div');
-            div.className = 's-item';
-            div.innerHTML = `<span class="s-icon">🔍</span> ${text}`;
-            div.onmousedown = () => performSearch(text);
-            suggestionsBox.appendChild(div);
-        });
-        suggestionsBox.style.display = 'flex';
-    };
-
-    // ==========================================
-    // DATA POOL (SYNTAX FIXED HERE)
-    // ==========================================
+    /* ================= SUGGESTIONS LOGIC (Same as before) ================= */
     const quotePools = {
         letters: {
-            A: [
+                      A: [
   "Aaj thoda heavy lag raha hai, par tu weak nahi hai 💪🫂",
   "Aage ka rasta dheere khulta hai, trust rakh 🚀✨",
   "Akele rehna bhi ek skill hai, enjoy your company 🏞️💭",
@@ -1113,28 +1150,39 @@ Z: [
   "9 baar deep breath, phir chill 😮‍💨🌿",
   "9 ka mood: simple happiness 😄✨",
   "9 ke saath smile natural hoti hai 😊",
-  "9 ka secret: sab pass ho jata hai ⏳🌈"
+  "9 ka secret: sab pass ho jata hai ⏳🌈" 
 ]
-  }
+        }
     };
 
-    // 7. VOICE
-    if ('webkitSpeechRecognition' in window) {
-        const recognition = new webkitSpeechRecognition();
-        recognition.lang = 'en-US';
-        mic.onclick = () => {
-            mic.classList.add('listening');
-            input.placeholder = "Listening...";
-            recognition.start();
-        };
-        recognition.onresult = (e) => {
-            const txt = e.results[0][0].transcript;
-            input.value = txt;
-            mic.classList.remove('listening');
-            performSearch(txt);
-        };
-    } else { mic.style.display = 'none'; }
+    input.addEventListener("input", () => {
+        const v = input.value.trim();
+        if (!v) {
+            suggestions.style.display = "none";
+            return;
+        }
 
-    if(window.UltraOS) UltraOS.log("Ultra Search HUD Loaded");
+        if (/^[a-zA-Z]$/.test(v) || /^[0-9]$/.test(v)) {
+            const key = v.toUpperCase();
+            const pool = isNaN(key) ? quotePools.letters[key] : quotePools.numbers[key];
+            
+            if (!pool) return;
+            
+            suggestions.innerHTML = "";
+            pool.slice(0, 2).forEach(q => {
+                const d = document.createElement("div");
+                d.className = "s-item";
+                d.textContent = "✨ " + q;
+                d.onclick = () => {
+                    input.value = q;
+                    suggestions.style.display = "none";
+                };
+                suggestions.appendChild(d);
+            });
+            suggestions.style.display = "flex";
+        } else {
+            suggestions.style.display = "none";
+        }
+    });
 
 })();
