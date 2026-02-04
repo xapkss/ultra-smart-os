@@ -3,51 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultra Smart OS (Locked)</title>
+    <title>Ultra Smart OS (Pro Kernel)</title>
     <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
-<link rel="apple-touch-icon" href="pic.png">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="pic.png">
 
     <style>
-        /* --- 🛠️ FIX 2: CORE VISUALS (Native App Feel) --- */
+        /* ================= CORE SYSTEM STYLES ================= */
         body, html { 
-            width: 100vw; 
-            height: 100dvh; /* Mobile Address Bar Fix */
+            width: 100vw; height: 100dvh; 
             margin: 0; padding: 0;
-            background: #000; 
-            overflow: hidden; /* Scroll Killed */
+            background: #000; overflow: hidden;
             font-family: 'Segoe UI', sans-serif; 
-            
-            /* Gestures Blocked */
-            touch-action: none; 
-            overscroll-behavior: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            touch-action: none; overscroll-behavior: none;
+            user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
-        /* --- LAYERS --- */
+        /* ================= 📐 LAYER MANAGEMENT (Z-INDEX) ================= 
+           Layer 1:   Wallpaper Image
+           Layer 2:   Live Video Overlay (Controlled by Panel)
+           Layer 10:  Desktop Icons/Widgets
+           Layer 100: Native Settings Button
+           Layer 200: Toast Notifications
+           Layer 9000-10000: Addon Panels (Gallery, Menu, Settings)
+           Layer 99990: Lock Screen
+           Layer 99999: Boot Screen
+        =================================================================== */
+
         #wallpaper-engine { 
-            position: fixed; inset: 0; z-index: 1; 
-            pointer-events: none; /* Click pass-through */
+            position: fixed; inset: 0; pointer-events: none; 
+            z-index: 0; /* Base Layer */
         }
-        .smart-bg { 
+
+        /* IMAGE LAYER (Base) */
+        #bg-img { 
             position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; /* Smart Crop */
-            object-position: center;
-            opacity: 0; transition: opacity 0.8s ease; 
+            object-fit: cover; z-index: 1; 
+            transition: opacity 0.5s ease;
         }
+
+        /* VIDEO LAYER (Overlay) - Important for Transparent Logic */
+        #bg-vid { 
+            position: absolute; inset: 0; width: 100%; height: 100%; 
+            object-fit: cover; z-index: 2; /* Always above Image */
+            opacity: 0; /* Hidden by default, Panel makes it 1 */
+            transition: opacity 0.8s ease; 
+        }
+        
+        /* Helper Class */
         .active-bg { opacity: 1; }
 
-        /* --- UI CONTROLS --- */
+        /* --- NATIVE CONTROLS --- */
         #settings-btn {
             position: absolute; top: 20px; right: 20px;
             width: 50px; height: 50px;
             background: rgba(255,255,255,0.1);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 50%; cursor: pointer;
-            backdrop-filter: blur(10px); z-index: 100;
+            backdrop-filter: blur(10px); z-index: 100; /* Native Layer */
             display: flex; align-items: center; justify-content: center;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: 0.3s;
         }
         #settings-btn:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
         .icon { width: 24px; height: 24px; fill: white; }
@@ -83,15 +98,20 @@
             repo: "ultra-smart-os",     
             branch: "main",             
             addons: [
-                "addon-wallpaper.js",
-                "addon-search.js",
-                "addon-apps.js",
-                "addon-gallery.js",
-                "addon-menu.js",
+                // 🚀 PRIORITY 1: Boot & Security (Load First)
                 "addon-boot.js",
                 "addon-lock.js",
-                "addon-panel.js"
 
+                // 🎨 PRIORITY 2: Core System
+                "addon-wallpaper.js",
+                "addon-clock.js",      // (Add this back if you have it)
+                "addon-weather.js",    // (Add this back if you have it)
+                "addon-search.js",
+                
+                // 📱 PRIORITY 3: Apps & UI
+                "addon-apps.js",       // (Includes Gallery & Dock)
+                "addon-menu.js",
+                "addon-panel.js"
             ]
         };
 
@@ -123,60 +143,52 @@
                 let loadList = [];
 
                 if (hasLocalWallpaper) {
-                    // Local Wallpaper Found: Remove 'addon-wallpaper.js' ONLY
-                    console.log("📂 Local Wallpaper Found - Skipping Cloud Wallpaper");
-                    notify("Personal Setup Loaded");
+                    // Local Wallpaper Found: Remove 'addon-wallpaper.js'
+                    console.log("📂 Local Data Found - Skipping Cloud Wallpaper");
                     loadList = REPO.addons.filter(file => file !== "addon-wallpaper.js");
                 } else {
                     // No Local Data: Load Everything
-                    console.log("☁️ No Local Data - Loading Default Cloud Setup");
+                    console.log("☁️ Clean Boot - Loading Default Setup");
                     loadList = REPO.addons;
                 }
 
-                // Execute Filtered List
+                // Execute List
                 loadCloudAddons(loadList);
             });
         });
 
-                // ================= SMART ADDON LOADER (WITH OFFLINE CACHE) =================
+        // ================= ADDON LOADER (OFFLINE CACHE) =================
         async function loadCloudAddons(fileList) {
-            console.log("🚀 Booting Addons...");
+            console.log("🚀 Starting Kernel...");
             
             for (const file of fileList) {
-                const cacheKey = `ultra_cache_${file}`; // Unique Name for Memory
+                const cacheKey = `ultra_cache_${file}`;
                 const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
                 
                 try {
-                    // STEP 1: Try to Download from Internet
+                    // 1. Download
                     const response = await fetch(url);
-                    if (!response.ok) throw new Error("Network Error");
-                    
+                    if (!response.ok) throw new Error("Net Error");
                     const scriptCode = await response.text();
                     
-                    // STEP 2: Save to Memory (Backup for Offline use)
+                    // 2. Save
                     localStorage.setItem(cacheKey, scriptCode);
-                    console.log(`☁️ Online Load: ${file}`);
                     
-                    // Run Code
+                    // 3. Run
                     new Function(scriptCode)();
 
                 } catch (e) {
-                    // STEP 3: Internet Failed? Load from Memory!
-                    console.warn(`⚠️ Offline Mode: Loading ${file} from Cache...`);
-                    
+                    // 4. Offline Fallback
                     const cachedCode = localStorage.getItem(cacheKey);
-                    
                     if (cachedCode) {
-                        new Function(cachedCode)(); // Run Saved Code
-                        notify(`Offline Mode: ${file.replace('addon-', '').replace('.js', '')}`);
+                        new Function(cachedCode)();
+                        console.log(`⚠️ Cached: ${file}`);
                     } else {
-                        console.error(`❌ Fatal: ${file} not found in Cache or Cloud.`);
-                        // Sirf pehli baar internet chahiye, uske baad hamesha chalega
+                        console.error(`❌ Failed: ${file}`);
                     }
                 }
             }
         }
-
 
         // ================= DATABASE ENGINE =================
         function initDB() {
@@ -216,12 +228,14 @@
         // ================= MEDIA ENGINE =================
         function applyMedia(url, type) {
             if (type === 'video') {
-                ui.img.classList.remove('active-bg');
+                // Agar user khud video laga raha hai, to Panel wala transparent logic override ho jayega
+                // Isliye hum native video tag use karte hain
                 ui.vid.src = url;
-                ui.vid.classList.add('active-bg');
+                ui.vid.style.opacity = '1';
+                ui.vid.style.zIndex = '1'; // User video layer
                 ui.vid.play().catch(e => console.log("Autoplay blocked"));
             } else {
-                ui.vid.classList.remove('active-bg');
+                ui.vid.style.opacity = '0';
                 ui.vid.pause();
                 ui.img.src = url;
                 ui.img.classList.add('active-bg');
@@ -240,22 +254,16 @@
             setTimeout(() => ui.toast.style.opacity = '0', 3000);
         }
 
-        // ================= 🛠️ FIX 3: ANTI-ZOOM GUARD (DESKTOP) =================
-        
-        // 1. Block Keyboard Zoom (Ctrl + / -)
+        // ================= ANTI-ZOOM GUARD =================
         document.addEventListener('keydown', function(event) {
             if ((event.ctrlKey || event.metaKey) && 
                 (event.key === '+' || event.key === '-' || event.key === '=' || event.key === '0')) {
                 event.preventDefault();
             }
         });
-
-        // 2. Block Mouse Wheel Zoom (Ctrl + Scroll)
         document.addEventListener('wheel', function(event) {
             if (event.ctrlKey) event.preventDefault();
         }, { passive: false });
-
-        // 3. Block Double Tap Zoom (Touch Devices)
         let lastTouchEnd = 0;
         document.addEventListener('touchend', function(event) {
             const now = (new Date()).getTime();
@@ -263,16 +271,12 @@
             lastTouchEnd = now;
         }, false);
 
-                // ================= PWA REGISTRATION (OFFLINE ENGINE) =================
+        // ================= PWA OFFLINE =================
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('✅ Service Worker Registered'))
-                    .catch(err => console.log('❌ SW Fail:', err));
+                navigator.serviceWorker.register('./sw.js').catch(err => console.log('❌ SW Fail'));
             });
         }
-
-
     </script>
 </body>
 </html>
