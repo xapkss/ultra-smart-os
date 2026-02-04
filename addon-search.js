@@ -736,6 +736,7 @@ R: [
   "Ruk kar saans le, tu akela nahi hai 🫂😌"
 ],
 S: [
+  "Shishupal the owner of this Ultra Os  📱 ",
   "Slow chalna safe hai, girne se bachoge 🐢🛡️",
   "Self-respect first, baaki sab baad me 👑🤍",
   "Strong banna loud nahi hota, wo andar ki shanti hai 🧘‍♂️💪",
@@ -1165,8 +1166,12 @@ Z: [
             
             if (!pool) return;
             
-            suggestions.innerHTML = "";
-            pool.slice(0, 2).forEach(q => {
+                        suggestions.innerHTML = "";
+            
+            // 👇 NEW LOGIC: Pehle pool ko random mix karega, fir 2 uthayega
+            const shuffled = [...pool].sort(() => 0.5 - Math.random());
+
+            shuffled.slice(0, 2).forEach(q => {
                 const d = document.createElement("div");
                 d.className = "s-item";
                 d.textContent = "✨ " + q;
@@ -1176,6 +1181,7 @@ Z: [
                 };
                 suggestions.appendChild(d);
             });
+
             suggestions.style.display = "flex";
         } else {
             suggestions.style.display = "none";
