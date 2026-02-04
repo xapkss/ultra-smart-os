@@ -30,7 +30,7 @@
         display: flex;
         align-items: center;
         padding: 0 20px;
-        z-index: 9999;
+        z-index: 1200;
 
         /* GLASSMORPHISM STYLE */
         background: rgba(30, 30, 30, 0.65);
