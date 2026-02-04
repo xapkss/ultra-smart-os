@@ -328,7 +328,6 @@ C: [
 ],
 
 D: [
-  "Darr ka matlab hai growth start ho rahi hai 😨➡️���",
   "Dheere hi sahi, rukna nahi 🐢🔥",
   "Dil thak sakta hai, par hausla nahi ❤️‍🔥🛡️",
   "Discipline mood ka wait nahi karta ⏰⚔️",
@@ -1150,9 +1149,7 @@ Z: [
   "9 baar deep breath, phir chill 😮‍💨🌿",
   "9 ka mood: simple happiness 😄✨",
   "9 ke saath smile natural hoti hai 😊",
-  "9 ka secret: sab pass ho jata hai ⏳🌈" 
-]
-        }
+  "9 ka secret: sab pass ho jata hai ⏳🌈"]  }
     };
 
     input.addEventListener("input", () => {
