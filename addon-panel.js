@@ -1,14 +1,14 @@
 /* FILENAME: addon-panel.js
-   PURPOSE: Control Panel (Auto-Create Video Element + Fix)
-   VERSION: 6.0 (Self-Healing)
+   PURPOSE: Control Panel + Custom File Uploader + Password
+   VERSION: 7.0 (Fully Integrated)
 */
 
 (function() {
     // 1. CONFIGURATION
     const CONFIG = {
         defaultVideo: "https://raw.githubusercontent.com/xapkss/ultra-smart-os/main/my.mp4",
-        aboutTitle: "Ultra OS v3.1",
-        aboutText: "System Active. Video Layer Overlay Enabled.",
+        aboutTitle: "Ultra OS Pro",
+        aboutText: "System Active. Manage Wallpapers & Security.",
         devName: "DRx Shishupal"
     };
 
@@ -17,7 +17,7 @@
     // 2. STYLES
     const style = document.createElement('style');
     style.innerHTML = `
-        /* PANEL & BUTTON STYLES */
+        /* BUTTON */
         #os-ctrl-btn {
             position: absolute; top: 80px; right: 20px;
             width: 50px; height: 50px;
@@ -29,6 +29,7 @@
         }
         #os-ctrl-btn:hover { transform: scale(1.1); background: rgba(66, 133, 244, 0.9); }
 
+        /* PANEL */
         #os-panel {
             position: absolute; top: 80px; right: 85px; width: 290px;
             background: rgba(15, 15, 15, 0.95); border: 1px solid rgba(255,255,255,0.1);
@@ -39,40 +40,25 @@
         }
         .panel-header { font-size: 16px; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 5px; color: #fff; }
         .panel-text { font-size: 12px; color: #888; margin-bottom: 5px; }
+        
         .panel-btn {
             background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.05);
             padding: 12px; border-radius: 10px; color: #ddd; cursor: pointer;
             font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; transition: 0.2s;
         }
-        .panel-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-        .btn-video { color: #8ab4f8; } .btn-reset { color: #ff8b8b; } .btn-pass { color: #ffd700; }
+        .panel-btn:hover { background: rgba(255,255,255,0.1); color: #fff; transform: translateX(5px); }
+        
+        .btn-upload { color: #0f0; border-color: rgba(0, 255, 0, 0.2); }
+        .btn-video { color: #8ab4f8; } 
+        .btn-reset { color: #ff8b8b; } 
+        .btn-pass { color: #ffd700; }
+        
         .dev-sig { margin-top: 15px; text-align: center; font-size: 10px; text-transform: uppercase; color: #555; font-weight: 700; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
-
-        /* VIDEO LAYER STYLE (Important) */
-        #bg-vid {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; z-index: -1; /* Image (-2) ke upar */
-            transition: opacity 0.5s ease; opacity: 0; pointer-events: none;
-        }
     `;
     document.head.appendChild(style);
 
-    // 3. AUTO-CREATE VIDEO ELEMENT (Safety Check)
-    let videoEl = document.getElementById('bg-vid');
-    if (!videoEl) {
-        // Agar HTML me video tag nahi hai, to JS khud bana dega
-        videoEl = document.createElement('video');
-        videoEl.id = 'bg-vid';
-        videoEl.autoplay = true;
-        videoEl.loop = true;
-        videoEl.muted = true;
-        videoEl.playsInline = true;
-        // Body me sabse pehle insert karo (background ke liye)
-        document.body.insertBefore(videoEl, document.body.firstChild);
-    }
-
-    // 4. UI BUILD
+    // 3. UI BUILD
     const btn = document.createElement('div');
     btn.id = 'os-ctrl-btn'; btn.innerHTML = '⚙️';
     document.body.appendChild(btn);
@@ -83,6 +69,8 @@
         <div class="panel-header">${CONFIG.aboutTitle}</div>
         <div class="panel-text">${CONFIG.aboutText}</div>
         
+        <button class="panel-btn btn-upload" id="p-upload">📁 Upload Custom Media</button>
+        
         <button class="panel-btn btn-video" id="p-set-video">🎥 Enable Live Wallpaper</button>
         <button class="panel-btn btn-reset" id="p-reset" style="display:none;">🔄 Disable (Show Image)</button>
         <button class="panel-btn btn-pass" id="p-pass">🔐 Change Password</button>
@@ -92,37 +80,63 @@
     `;
     document.body.appendChild(panel);
 
-    // 5. LOGIC ENGINE
+    // Hidden Input for File Picking
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'file';
+    hiddenInput.accept = 'image/*,video/*';
+    hiddenInput.style.display = 'none';
+    document.body.appendChild(hiddenInput);
+
+    // 4. LOGIC ENGINE
     const ui = {
         btn: document.getElementById('os-ctrl-btn'),
         panel: document.getElementById('os-panel'),
+        btnUpload: document.getElementById('p-upload'),
         btnVid: document.getElementById('p-set-video'),
         btnReset: document.getElementById('p-reset'),
         btnPass: document.getElementById('p-pass'),
         btnHide: document.getElementById('p-hide-ui'),
-        bgVid: videoEl // Ab ye kabhi null nahi hoga
+        bgVid: document.getElementById('bg-vid')
     };
+
+    // Fix Video Element if missing
+    if (!ui.bgVid) {
+        const v = document.createElement('video');
+        v.id = 'bg-vid'; v.autoplay = true; v.loop = true; v.muted = true; v.playsInline = true;
+        document.body.insertBefore(v, document.body.firstChild);
+        ui.bgVid = v;
+    }
 
     ui.btn.onclick = () => ui.panel.style.display = (ui.panel.style.display === 'flex' ? 'none' : 'flex');
 
-    // === VIDEO LOGIC ===
+    // === UPLOAD LOGIC (NEW) ===
+    ui.btnUpload.onclick = () => hiddenInput.click();
+    
+    hiddenInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file && window.UltraOS) {
+            // Send file to Kernel (index.html)
+            window.UltraOS.saveLocalWallpaper(file);
+            ui.panel.style.display = 'none'; // Close panel on success
+        }
+    };
+
+    // === TRANSPARENT VIDEO LOGIC ===
     function enableVideo(save=true) {
         if (!ui.bgVid.src || ui.bgVid.src === "" || ui.bgVid.src === window.location.href) {
             ui.bgVid.src = CONFIG.defaultVideo;
         }
         ui.bgVid.muted = true;
-        ui.bgVid.style.opacity = '1'; // Make Visible
-        ui.bgVid.play().catch(e => console.log("Autoplay blocked:", e));
-
+        ui.bgVid.style.opacity = '1'; 
+        ui.bgVid.play().catch(()=>{});
         ui.btnVid.style.display = 'none';
         ui.btnReset.style.display = 'flex';
         if(save) localStorage.setItem('os_wallpaper_mode', 'video');
     }
 
     function disableVideo(save=true) {
-        ui.bgVid.style.opacity = '0'; // Make Invisible
-        setTimeout(() => ui.bgVid.pause(), 500); // Save Battery
-        
+        ui.bgVid.style.opacity = '0'; // Transparent
+        setTimeout(() => ui.bgVid.pause(), 500);
         ui.btnReset.style.display = 'none';
         ui.btnVid.style.display = 'flex';
         if(save) localStorage.setItem('os_wallpaper_mode', 'image');
@@ -135,14 +149,14 @@
     // === PASSWORD LOGIC ===
     ui.btnPass.onclick = () => {
         const currentPin = localStorage.getItem('os_user_pin') || "1234";
-        const userOld = prompt("Enter Current PIN:");
-        if (userOld === currentPin) {
-            const newPin = prompt("Enter New 4-Digit PIN:");
-            if (newPin && newPin.length === 4 && !isNaN(newPin)) {
-                localStorage.setItem('os_user_pin', newPin);
-                alert("✅ Password Updated!");
-            } else { alert("❌ PIN must be 4 digits."); }
-        } else { alert("❌ Wrong PIN!"); }
+        const old = prompt("Current PIN:");
+        if (old === currentPin) {
+            const newP = prompt("New 4-Digit PIN:");
+            if (newP && newP.length === 4 && !isNaN(newP)) {
+                localStorage.setItem('os_user_pin', newP);
+                alert("✅ Updated!");
+            } else alert("❌ Invalid PIN");
+        } else alert("❌ Wrong PIN");
     };
 
     // === AUTO START ===
