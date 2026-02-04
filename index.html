@@ -60,9 +60,18 @@
         const REPO = {
             user: "xapkss", repo: "ultra-smart-os", branch: "main",             
             addons: [
-                "addon-boot.js", "addon-lock.js", // Priority 1
-                "addon-wallpaper.js", "addon-search.js", "addon-apps.js", // Priority 2
-                "addon-menu.js", "addon-panel.js" // Priority 3
+                // Priority 1
+        "addon-boot.js", 
+        "addon-lock.js", 
+        
+        // Priority 2 (Wallpaper logic ab panel me hai, yahan se hata diya)
+        "addon-search.js", 
+        "addon-apps.js", 
+        
+        // Priority 3
+        "addon-menu.js", 
+        "addon-panel.js" // Sab kuch ye sambhalega
+
             ]
         };
 
