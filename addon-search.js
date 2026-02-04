@@ -1181,7 +1181,23 @@ Z: [
                 };
                 suggestions.appendChild(d);
             });
+               /* ================= SEARCH LOGIC (FIX) ================= */
+    function performSearch(query) {
+        if (!query) return;
+        // Yaha tum define kar sakte ho ki search kaise ho (Google, Bing, etc.)
+        const url = "https://www.google.com/search?q=" + encodeURIComponent(query);
+        window.open(url, "_blank"); // New tab mein kholega
+        // window.location.href = url; // Agar same tab mein kholna hai to isse uncomment karo
+    }
 
+    // 1. Enter Key Listener
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            performSearch(input.value.trim());
+            suggestions.style.display = "none"; // Search ke baad suggestions hata do
+        }
+    });
+           
             suggestions.style.display = "flex";
         } else {
             suggestions.style.display = "none";
