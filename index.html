@@ -3,38 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ultra Smart OS (Pro Kernel)</title>
+    <title>Ultra Smart OS (Locked)</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000">
-    <link rel="apple-touch-icon" href="pic.png">
+<meta name="theme-color" content="#000000">
+<link rel="apple-touch-icon" href="pic.png">
 
     <style>
-        /* CORE SYSTEM */
+        /* --- 🛠️ FIX 2: CORE VISUALS (Native App Feel) --- */
         body, html { 
-            width: 100vw; height: 100dvh; 
+            width: 100vw; 
+            height: 100dvh; /* Mobile Address Bar Fix */
             margin: 0; padding: 0;
-            background: #000; overflow: hidden;
+            background: #000; 
+            overflow: hidden; /* Scroll Killed */
             font-family: 'Segoe UI', sans-serif; 
-            touch-action: none; overscroll-behavior: none;
-            user-select: none; -webkit-tap-highlight-color: transparent;
+            
+            /* Gestures Blocked */
+            touch-action: none; 
+            overscroll-behavior: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* LAYERS */
-        #wallpaper-engine { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-        
-        #bg-img { 
-            position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; z-index: 1; transition: opacity 0.5s ease;
+        /* --- LAYERS --- */
+        #wallpaper-engine { 
+            position: fixed; inset: 0; z-index: 1; 
+            pointer-events: none; /* Click pass-through */
         }
-        
-        #bg-vid { 
+        .smart-bg { 
             position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.8s ease; 
+            object-fit: cover; /* Smart Crop */
+            object-position: center;
+            opacity: 0; transition: opacity 0.8s ease; 
         }
-
         .active-bg { opacity: 1; }
 
-        /* TOAST NOTIFICATION */
+        /* --- UI CONTROLS --- */
+        #settings-btn {
+            position: absolute; top: 20px; right: 20px;
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%; cursor: pointer;
+            backdrop-filter: blur(10px); z-index: 100;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #settings-btn:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
+        .icon { width: 24px; height: 24px; fill: white; }
+        
         #toast {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff;
@@ -44,6 +61,8 @@
             display: flex; align-items: center; gap: 8px;
         }
         .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; }
+
+        #file-input { display: none; }
     </style>
 </head>
 <body>
@@ -53,38 +72,33 @@
         <video id="bg-vid" class="smart-bg" loop muted playsinline></video>
     </div>
 
+    <button id="settings-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22l-1.92 3.32c-.12.22-.07.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
+    <input type="file" id="file-input" accept="image/*,video/*">
     <div id="toast"><div class="status-dot"></div><span id="toast-msg">System Ready</span></div>
 
     <script>
         // ================= ⚙️ SYSTEM CONFIG =================
         const REPO = {
-            user: "xapkss", repo: "ultra-smart-os", branch: "main",             
+            user: "xapkss",             
+            repo: "ultra-smart-os",     
+            branch: "main",             
             addons: [
-                // Priority 1
-        "addon-boot.js", 
-        "addon-lock.js", 
-        
-        // Priority 2 (Wallpaper logic ab panel me hai, yahan se hata diya)
-        "addon-search.js", 
-        "addon-apps.js", 
-        
-        // Priority 3
-        "addon-menu.js", 
-        "addon-panel.js" // Sab kuch ye sambhalega
+                "addon-wallpaper.js",
+                "addon-search.js",
+                "addon-apps.js",
+                "addon-gallery.js",
+                "addon-menu.js",
+                "addon-boot.js",
+                "addon-lock.js"
 
             ]
         };
 
-        // ================= GLOBAL API (Exposed to Addons) =================
+        // ================= GLOBAL API =================
         window.UltraOS = {
-            // Addons use this to apply URL wallpapers
             setWallpaper: (url, type = 'image') => {
                 applyMedia(url, type);
                 notify("Wallpaper Updated");
-            },
-            // Addons use this to save LOCAL files (Blob)
-            saveLocalWallpaper: (file) => {
-                saveUserPreference(file);
             },
             notify: (msg) => notify(msg),
             log: (msg) => console.log(`[UltraOS]: ${msg}`)
@@ -94,22 +108,74 @@
         const ui = {
             img: document.getElementById('bg-img'),
             vid: document.getElementById('bg-vid'),
+            btn: document.getElementById('settings-btn'),
+            picker: document.getElementById('file-input'),
             toast: document.getElementById('toast'),
             msg: document.getElementById('toast-msg')
         };
         let db;
 
-        // ================= BOOT SEQUENCE =================
+        // ================= SMART BOOT SEQUENCE =================
         initDB().then(() => {
             loadUserPreference().then(hasLocalWallpaper => {
-                let loadList = REPO.addons;
+                
+                let loadList = [];
+
                 if (hasLocalWallpaper) {
-                    console.log("📂 Local Data Found - Skipping Default Wallpaper");
+                    // Local Wallpaper Found: Remove 'addon-wallpaper.js' ONLY
+                    console.log("📂 Local Wallpaper Found - Skipping Cloud Wallpaper");
+                    notify("Personal Setup Loaded");
                     loadList = REPO.addons.filter(file => file !== "addon-wallpaper.js");
+                } else {
+                    // No Local Data: Load Everything
+                    console.log("☁️ No Local Data - Loading Default Cloud Setup");
+                    loadList = REPO.addons;
                 }
+
+                // Execute Filtered List
                 loadCloudAddons(loadList);
             });
         });
+
+                // ================= SMART ADDON LOADER (WITH OFFLINE CACHE) =================
+        async function loadCloudAddons(fileList) {
+            console.log("🚀 Booting Addons...");
+            
+            for (const file of fileList) {
+                const cacheKey = `ultra_cache_${file}`; // Unique Name for Memory
+                const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
+                
+                try {
+                    // STEP 1: Try to Download from Internet
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Network Error");
+                    
+                    const scriptCode = await response.text();
+                    
+                    // STEP 2: Save to Memory (Backup for Offline use)
+                    localStorage.setItem(cacheKey, scriptCode);
+                    console.log(`☁️ Online Load: ${file}`);
+                    
+                    // Run Code
+                    new Function(scriptCode)();
+
+                } catch (e) {
+                    // STEP 3: Internet Failed? Load from Memory!
+                    console.warn(`⚠️ Offline Mode: Loading ${file} from Cache...`);
+                    
+                    const cachedCode = localStorage.getItem(cacheKey);
+                    
+                    if (cachedCode) {
+                        new Function(cachedCode)(); // Run Saved Code
+                        notify(`Offline Mode: ${file.replace('addon-', '').replace('.js', '')}`);
+                    } else {
+                        console.error(`❌ Fatal: ${file} not found in Cache or Cloud.`);
+                        // Sirf pehli baar internet chahiye, uske baad hamesha chalega
+                    }
+                }
+            }
+        }
+
 
         // ================= DATABASE ENGINE =================
         function initDB() {
@@ -129,7 +195,9 @@
                         const url = URL.createObjectURL(req.result.file);
                         applyMedia(url, req.result.type);
                         resolve(true); 
-                    } else { resolve(false); }
+                    } else {
+                        resolve(false); 
+                    }
                 };
             });
         }
@@ -141,53 +209,69 @@
             
             const url = URL.createObjectURL(file);
             applyMedia(url, type);
-            notify("💾 Saved to Disk");
+            notify("💾 Setup Saved");
         }
 
         // ================= MEDIA ENGINE =================
         function applyMedia(url, type) {
             if (type === 'video') {
+                ui.img.classList.remove('active-bg');
                 ui.vid.src = url;
-                ui.vid.style.opacity = '1'; 
-                ui.vid.style.zIndex = '1'; // Force visible
+                ui.vid.classList.add('active-bg');
                 ui.vid.play().catch(e => console.log("Autoplay blocked"));
             } else {
-                ui.vid.style.opacity = '0';
-                setTimeout(()=> ui.vid.pause(), 500);
+                ui.vid.classList.remove('active-bg');
+                ui.vid.pause();
                 ui.img.src = url;
                 ui.img.classList.add('active-bg');
             }
         }
 
-        // ================= ADDON LOADER =================
-        async function loadCloudAddons(fileList) {
-            console.log("🚀 Starting Kernel...");
-            for (const file of fileList) {
-                const cacheKey = `ultra_cache_${file}`;
-                const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Net Error");
-                    const scriptCode = await response.text();
-                    localStorage.setItem(cacheKey, scriptCode);
-                    new Function(scriptCode)();
-                } catch (e) {
-                    const cachedCode = localStorage.getItem(cacheKey);
-                    if (cachedCode) new Function(cachedCode)();
-                }
-            }
-        }
+        // ================= UI INTERACTION =================
+        ui.btn.addEventListener('click', () => ui.picker.click());
+        ui.picker.addEventListener('change', (e) => {
+            if (e.target.files[0]) saveUserPreference(e.target.files[0]);
+        });
 
         function notify(text) {
-            ui.msg.textContent = text; ui.toast.style.opacity = '1';
+            ui.msg.textContent = text;
+            ui.toast.style.opacity = '1';
             setTimeout(() => ui.toast.style.opacity = '0', 3000);
         }
 
-        // ================= SYSTEM GUARDS =================
-        document.addEventListener('contextmenu', event => event.preventDefault()); // Right Click Blocked (Handled by Addon)
+        // ================= 🛠️ FIX 3: ANTI-ZOOM GUARD (DESKTOP) =================
+        
+        // 1. Block Keyboard Zoom (Ctrl + / -)
+        document.addEventListener('keydown', function(event) {
+            if ((event.ctrlKey || event.metaKey) && 
+                (event.key === '+' || event.key === '-' || event.key === '=' || event.key === '0')) {
+                event.preventDefault();
+            }
+        });
+
+        // 2. Block Mouse Wheel Zoom (Ctrl + Scroll)
+        document.addEventListener('wheel', function(event) {
+            if (event.ctrlKey) event.preventDefault();
+        }, { passive: false });
+
+        // 3. Block Double Tap Zoom (Touch Devices)
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) event.preventDefault();
+            lastTouchEnd = now;
+        }, false);
+
+                // ================= PWA REGISTRATION (OFFLINE ENGINE) =================
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('✅ Service Worker Registered'))
+                    .catch(err => console.log('❌ SW Fail:', err));
+            });
         }
+
+
     </script>
 </body>
 </html>
