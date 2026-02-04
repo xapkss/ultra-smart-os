@@ -9,7 +9,7 @@
     <link rel="apple-touch-icon" href="pic.png">
 
     <style>
-        /* ================= CORE SYSTEM STYLES ================= */
+        /* CORE SYSTEM */
         body, html { 
             width: 100vw; height: 100dvh; 
             margin: 0; padding: 0;
@@ -19,54 +19,22 @@
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
-        /* ================= 📐 LAYER MANAGEMENT (Z-INDEX) ================= 
-           Layer 1:   Wallpaper Image
-           Layer 2:   Live Video Overlay (Controlled by Panel)
-           Layer 10:  Desktop Icons/Widgets
-           Layer 100: Native Settings Button
-           Layer 200: Toast Notifications
-           Layer 9000-10000: Addon Panels (Gallery, Menu, Settings)
-           Layer 99990: Lock Screen
-           Layer 99999: Boot Screen
-        =================================================================== */
-
-        #wallpaper-engine { 
-            position: fixed; inset: 0; pointer-events: none; 
-            z-index: 0; /* Base Layer */
-        }
-
-        /* IMAGE LAYER (Base) */
+        /* LAYERS */
+        #wallpaper-engine { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+        
         #bg-img { 
             position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; z-index: 1; 
-            transition: opacity 0.5s ease;
+            object-fit: cover; z-index: 1; transition: opacity 0.5s ease;
         }
-
-        /* VIDEO LAYER (Overlay) - Important for Transparent Logic */
+        
         #bg-vid { 
             position: absolute; inset: 0; width: 100%; height: 100%; 
-            object-fit: cover; z-index: 2; /* Always above Image */
-            opacity: 0; /* Hidden by default, Panel makes it 1 */
-            transition: opacity 0.8s ease; 
+            object-fit: cover; z-index: 2; opacity: 0; transition: opacity 0.8s ease; 
         }
-        
-        /* Helper Class */
+
         .active-bg { opacity: 1; }
 
-        /* --- NATIVE CONTROLS --- */
-        #settings-btn {
-            position: absolute; top: 20px; right: 20px;
-            width: 50px; height: 50px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 50%; cursor: pointer;
-            backdrop-filter: blur(10px); z-index: 100; /* Native Layer */
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.3s;
-        }
-        #settings-btn:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
-        .icon { width: 24px; height: 24px; fill: white; }
-        
+        /* TOAST NOTIFICATION */
         #toast {
             position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: #fff;
@@ -76,8 +44,6 @@
             display: flex; align-items: center; gap: 8px;
         }
         .status-dot { width: 8px; height: 8px; background: #0f0; border-radius: 50%; }
-
-        #file-input { display: none; }
     </style>
 </head>
 <body>
@@ -87,39 +53,29 @@
         <video id="bg-vid" class="smart-bg" loop muted playsinline></video>
     </div>
 
-    <button id="settings-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22l-1.92 3.32c-.12.22-.07.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
-    <input type="file" id="file-input" accept="image/*,video/*">
     <div id="toast"><div class="status-dot"></div><span id="toast-msg">System Ready</span></div>
 
     <script>
         // ================= ⚙️ SYSTEM CONFIG =================
         const REPO = {
-            user: "xapkss",             
-            repo: "ultra-smart-os",     
-            branch: "main",             
+            user: "xapkss", repo: "ultra-smart-os", branch: "main",             
             addons: [
-                // 🚀 PRIORITY 1: Boot & Security (Load First)
-                "addon-boot.js",
-                "addon-lock.js",
-
-                // 🎨 PRIORITY 2: Core System
-                "addon-wallpaper.js",
-                "addon-clock.js",      // (Add this back if you have it)
-                "addon-weather.js",    // (Add this back if you have it)
-                "addon-search.js",
-                
-                // 📱 PRIORITY 3: Apps & UI
-                "addon-apps.js",       // (Includes Gallery & Dock)
-                "addon-menu.js",
-                "addon-panel.js"
+                "addon-boot.js", "addon-lock.js", // Priority 1
+                "addon-wallpaper.js", "addon-search.js", "addon-apps.js", // Priority 2
+                "addon-menu.js", "addon-panel.js" // Priority 3
             ]
         };
 
-        // ================= GLOBAL API =================
+        // ================= GLOBAL API (Exposed to Addons) =================
         window.UltraOS = {
+            // Addons use this to apply URL wallpapers
             setWallpaper: (url, type = 'image') => {
                 applyMedia(url, type);
                 notify("Wallpaper Updated");
+            },
+            // Addons use this to save LOCAL files (Blob)
+            saveLocalWallpaper: (file) => {
+                saveUserPreference(file);
             },
             notify: (msg) => notify(msg),
             log: (msg) => console.log(`[UltraOS]: ${msg}`)
@@ -129,66 +85,22 @@
         const ui = {
             img: document.getElementById('bg-img'),
             vid: document.getElementById('bg-vid'),
-            btn: document.getElementById('settings-btn'),
-            picker: document.getElementById('file-input'),
             toast: document.getElementById('toast'),
             msg: document.getElementById('toast-msg')
         };
         let db;
 
-        // ================= SMART BOOT SEQUENCE =================
+        // ================= BOOT SEQUENCE =================
         initDB().then(() => {
             loadUserPreference().then(hasLocalWallpaper => {
-                
-                let loadList = [];
-
+                let loadList = REPO.addons;
                 if (hasLocalWallpaper) {
-                    // Local Wallpaper Found: Remove 'addon-wallpaper.js'
-                    console.log("📂 Local Data Found - Skipping Cloud Wallpaper");
+                    console.log("📂 Local Data Found - Skipping Default Wallpaper");
                     loadList = REPO.addons.filter(file => file !== "addon-wallpaper.js");
-                } else {
-                    // No Local Data: Load Everything
-                    console.log("☁️ Clean Boot - Loading Default Setup");
-                    loadList = REPO.addons;
                 }
-
-                // Execute List
                 loadCloudAddons(loadList);
             });
         });
-
-        // ================= ADDON LOADER (OFFLINE CACHE) =================
-        async function loadCloudAddons(fileList) {
-            console.log("🚀 Starting Kernel...");
-            
-            for (const file of fileList) {
-                const cacheKey = `ultra_cache_${file}`;
-                const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
-                
-                try {
-                    // 1. Download
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Net Error");
-                    const scriptCode = await response.text();
-                    
-                    // 2. Save
-                    localStorage.setItem(cacheKey, scriptCode);
-                    
-                    // 3. Run
-                    new Function(scriptCode)();
-
-                } catch (e) {
-                    // 4. Offline Fallback
-                    const cachedCode = localStorage.getItem(cacheKey);
-                    if (cachedCode) {
-                        new Function(cachedCode)();
-                        console.log(`⚠️ Cached: ${file}`);
-                    } else {
-                        console.error(`❌ Failed: ${file}`);
-                    }
-                }
-            }
-        }
 
         // ================= DATABASE ENGINE =================
         function initDB() {
@@ -208,9 +120,7 @@
                         const url = URL.createObjectURL(req.result.file);
                         applyMedia(url, req.result.type);
                         resolve(true); 
-                    } else {
-                        resolve(false); 
-                    }
+                    } else { resolve(false); }
                 };
             });
         }
@@ -222,60 +132,52 @@
             
             const url = URL.createObjectURL(file);
             applyMedia(url, type);
-            notify("💾 Setup Saved");
+            notify("💾 Saved to Disk");
         }
 
         // ================= MEDIA ENGINE =================
         function applyMedia(url, type) {
             if (type === 'video') {
-                // Agar user khud video laga raha hai, to Panel wala transparent logic override ho jayega
-                // Isliye hum native video tag use karte hain
                 ui.vid.src = url;
-                ui.vid.style.opacity = '1';
-                ui.vid.style.zIndex = '1'; // User video layer
+                ui.vid.style.opacity = '1'; 
+                ui.vid.style.zIndex = '1'; // Force visible
                 ui.vid.play().catch(e => console.log("Autoplay blocked"));
             } else {
                 ui.vid.style.opacity = '0';
-                ui.vid.pause();
+                setTimeout(()=> ui.vid.pause(), 500);
                 ui.img.src = url;
                 ui.img.classList.add('active-bg');
             }
         }
 
-        // ================= UI INTERACTION =================
-        ui.btn.addEventListener('click', () => ui.picker.click());
-        ui.picker.addEventListener('change', (e) => {
-            if (e.target.files[0]) saveUserPreference(e.target.files[0]);
-        });
+        // ================= ADDON LOADER =================
+        async function loadCloudAddons(fileList) {
+            console.log("🚀 Starting Kernel...");
+            for (const file of fileList) {
+                const cacheKey = `ultra_cache_${file}`;
+                const url = `https://raw.githubusercontent.com/${REPO.user}/${REPO.repo}/${REPO.branch}/${file}?t=${Date.now()}`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Net Error");
+                    const scriptCode = await response.text();
+                    localStorage.setItem(cacheKey, scriptCode);
+                    new Function(scriptCode)();
+                } catch (e) {
+                    const cachedCode = localStorage.getItem(cacheKey);
+                    if (cachedCode) new Function(cachedCode)();
+                }
+            }
+        }
 
         function notify(text) {
-            ui.msg.textContent = text;
-            ui.toast.style.opacity = '1';
+            ui.msg.textContent = text; ui.toast.style.opacity = '1';
             setTimeout(() => ui.toast.style.opacity = '0', 3000);
         }
 
-        // ================= ANTI-ZOOM GUARD =================
-        document.addEventListener('keydown', function(event) {
-            if ((event.ctrlKey || event.metaKey) && 
-                (event.key === '+' || event.key === '-' || event.key === '=' || event.key === '0')) {
-                event.preventDefault();
-            }
-        });
-        document.addEventListener('wheel', function(event) {
-            if (event.ctrlKey) event.preventDefault();
-        }, { passive: false });
-        let lastTouchEnd = 0;
-        document.addEventListener('touchend', function(event) {
-            const now = (new Date()).getTime();
-            if (now - lastTouchEnd <= 300) event.preventDefault();
-            lastTouchEnd = now;
-        }, false);
-
-        // ================= PWA OFFLINE =================
+        // ================= SYSTEM GUARDS =================
+        document.addEventListener('contextmenu', event => event.preventDefault()); // Right Click Blocked (Handled by Addon)
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(err => console.log('❌ SW Fail'));
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
         }
     </script>
 </body>
