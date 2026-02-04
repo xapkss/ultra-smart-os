@@ -1,5 +1,5 @@
 /* =========================================================
-   ULTRA SEARCH HUD — FINAL SINGLE SCRIPT
+   ULTRA SEARCH HUD — FINAL (SM / MD / LG RESIZE)
    ========================================================= */
 
 (function () {
@@ -15,12 +15,13 @@
     position: fixed;
     top: 20%; left: 50%;
     transform: translateX(-50%);
-    width: 90%; max-width: 650px;
+    width: 90%;
+    max-width: 650px; /* MEDIUM DEFAULT */
     height: 60px;
     display: flex; align-items: center;
     padding: 0 18px;
 
-    z-index: 1200; /* NOT TOPMOST */
+    z-index: 1200;
 
     background: linear-gradient(135deg,
         rgba(20,20,20,0.55),
@@ -32,21 +33,32 @@
     box-shadow:
         0 0 0 1px var(--neon-soft),
         0 0 40px var(--neon);
-    transition: transform .2s;
     cursor: grab;
 }
-#os-search-widget:active{ cursor:grabbing; transform:scale(.98); }
+#os-search-widget:active{
+    cursor:grabbing;
+    transform:scale(.98);
+}
 
 #os-search-input{
-    flex:1; height:100%;
-    background:none; border:none; outline:none;
-    font-size:18px; color:#fff;
+    flex:1;
+    height:100%;
+    background:none;
+    border:none;
+    outline:none;
+    font-size:18px;
+    color:#fff;
 }
-#os-search-input::placeholder{ color:rgba(255,255,255,.4); }
+#os-search-input::placeholder{
+    color:rgba(255,255,255,.4);
+}
 
 #os-suggestions{
-    position:absolute; top:70px; left:0;
-    width:100%; display:none; flex-direction:column;
+    position:absolute;
+    top:70px; left:0;
+    width:100%;
+    display:none;
+    flex-direction:column;
     background:rgba(15,15,15,.9);
     backdrop-filter:blur(20px);
     border-radius:12px;
@@ -58,10 +70,6 @@
     line-height:1.35;
     color:rgba(255,255,255,.88);
     border-bottom:1px solid rgba(255,255,255,.06);
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
 }
 
 #os-search-widget::after{
@@ -74,7 +82,7 @@
     opacity:.6;
 }
 
-/* Resize Panel */
+/* ===== Resize Panel ===== */
 #os-resize-panel{
     position:fixed;
     inset:0;
@@ -87,17 +95,34 @@
 }
 #os-resize-box{
     width:260px;
-    padding:20px;
+    padding:18px;
     border-radius:16px;
-    background:rgba(20,20,20,.85);
+    background:rgba(20,20,20,.9);
     border:1px solid rgba(255,255,255,.15);
 }
 #os-resize-box p{
-    margin:0 0 10px;
+    margin:0 0 12px;
     color:#fff;
     font-size:14px;
+    text-align:center;
 }
-#os-resize-box input{ width:100%; }
+.os-size-btns{
+    display:flex;
+    gap:10px;
+}
+.os-size-btns button{
+    flex:1;
+    padding:10px;
+    border-radius:10px;
+    border:none;
+    background:#222;
+    color:#fff;
+    font-size:14px;
+    cursor:pointer;
+}
+.os-size-btns button:hover{
+    background:#333;
+}
 `;
     document.head.appendChild(style);
 
@@ -117,26 +142,35 @@
     resizePanel.id = "os-resize-panel";
     resizePanel.innerHTML = `
 <div id="os-resize-box">
-  <p>Resize Search Bar</p>
-  <input type="range" min="320" max="900" value="650">
+  <p>Search Bar Size</p>
+  <div class="os-size-btns">
+    <button data-size="small">Small</button>
+    <button data-size="medium">Medium</button>
+    <button data-size="large">Large</button>
+  </div>
 </div>`;
     document.body.appendChild(resizePanel);
 
-    const resizeSlider = resizePanel.querySelector("input");
-
-    resizeSlider.oninput = () => {
-        widget.style.maxWidth = resizeSlider.value + "px";
-    };
     resizePanel.onclick = e => {
         if (e.target === resizePanel)
             resizePanel.style.display = "none";
     };
 
+    resizePanel.querySelectorAll("button").forEach(btn=>{
+        btn.onclick = ()=>{
+            const size = btn.dataset.size;
+            if (size === "small") widget.style.maxWidth = "420px";
+            if (size === "medium") widget.style.maxWidth = "650px";
+            if (size === "large") widget.style.maxWidth = "900px";
+            resizePanel.style.display = "none";
+        };
+    });
+
     /* ================= SAMPLE QUOTES ================= */
     const quotePools = {
         letters: {
-            A: ["Aaj bas thoda better ban ja 💪", "Aage ka rasta dheere khulta hai ✨"],
-            B: ["Bas rukna mat 🐢", "Break lena theek hai ☕"],
+            A: ["Aaj bas thoda better ban ja 💪"],
+            B: ["Bas rukna mat 🐢"],
             C: ["Calm rehna bhi ek power hai 🧘‍♂️"]
         },
         numbers: {
@@ -145,41 +179,17 @@
         }
     };
 
-    /* ================= TIME + MOOD ================= */
-    function getMood(){
-        const h=new Date().getHours();
-        if(h>=22||h<5) return "night";
-        if(h<11) return "calm";
-        if(h<17) return "motivational";
-        return "calm";
-    }
-
-    function prioritize(pool){
-        const mood=getMood();
-        const calm=["calm","break","slow","trust"];
-        const moti=["better","fight","step","win"];
-        return [...pool].sort((a,b)=>{
-            let sa=0,sb=0;
-            const A=a.toLowerCase(),B=b.toLowerCase();
-            (mood==="motivational"?moti:calm).forEach(k=>{
-                if(A.includes(k)) sa+=2;
-                if(B.includes(k)) sb+=2;
-            });
-            return sb-sa+(Math.random()-.5);
-        });
-    }
-
     /* ================= INPUT ================= */
     input.addEventListener("input",()=>{
         const v=input.value.trim();
-        if(!v){box.style.display="none";return;}
+        if(!v){ box.style.display="none"; return; }
 
         if(/^[a-zA-Z]$/.test(v)||/^[0-9]$/.test(v)){
             const key=v.toUpperCase();
             const pool=isNaN(key)?quotePools.letters[key]:quotePools.numbers[key];
             if(!pool) return;
             box.innerHTML="";
-            prioritize(pool).slice(0,2).forEach(q=>{
+            pool.slice(0,2).forEach(q=>{
                 const d=document.createElement("div");
                 d.className="s-item";
                 d.textContent="✨ "+q;
@@ -189,9 +199,8 @@
         } else box.style.display="none";
     });
 
-    /* ================= DRAG (DESKTOP + MOBILE) ================= */
+    /* ================= DRAG ================= */
     let drag=false,sx,sy,sl,st;
-
     function dragStart(e){
         if(e.target.tagName==="INPUT") return;
         drag=true;
@@ -199,15 +208,15 @@
         sx=p.clientX; sy=p.clientY;
         const r=widget.getBoundingClientRect();
         sl=r.left; st=r.top;
-        widget.style.transform="none";
         widget.style.left=sl+"px";
-        widget.style.top =st+"px";
+        widget.style.top=st+"px";
+        widget.style.transform="none";
     }
     function dragMove(e){
         if(!drag) return;
         const p=e.touches?e.touches[0]:e;
         widget.style.left=sl+(p.clientX-sx)+"px";
-        widget.style.top =st+(p.clientY-sy)+"px";
+        widget.style.top=st+(p.clientY-sy)+"px";
     }
     function dragEnd(){ drag=false; }
 
@@ -218,16 +227,16 @@
     document.addEventListener("mouseup",dragEnd);
     document.addEventListener("touchend",dragEnd);
 
-    /* ================= DOUBLE TAP CORNER → RESIZE ================= */
+    /* ================= DOUBLE TAP CORNER → RESIZE PANEL ================= */
     let lastTap=0;
     widget.addEventListener("click",e=>{
         const r=widget.getBoundingClientRect();
-        const nearCorner=e.clientX>r.right-40 && e.clientY>r.bottom-40;
-        const now=Date.now();
-        if(nearCorner && now-lastTap<350){
+        const nearCorner = e.clientX > r.right-40 && e.clientY > r.bottom-40;
+        const now = Date.now();
+        if (nearCorner && now-lastTap < 350) {
             resizePanel.style.display="flex";
         }
-        lastTap=now;
+        lastTap = now;
     });
 
 })();
