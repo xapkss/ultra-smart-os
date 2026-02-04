@@ -122,7 +122,6 @@
             <span class="clock-sec" id="u-sec">00</span>
         </div>
         <div class="clock-date" id="u-date">...</div>
-        <div class="clock-hint">Double-click to toggle 12h/24h</div>
     `;
     document.body.appendChild(widget);
 
