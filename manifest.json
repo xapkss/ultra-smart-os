@@ -1,6 +1,6 @@
 {
-  "name": "Ultra Smart OS",
-  "short_name": "UltraOS",
+  "name": "xapkss Os By-(Shishupal)",
+  "short_name": "xapkss Os",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",
@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "pic.png",
+      "src": "logo.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "pic.png",
+      "src": "logo.png",
       "sizes": "512x512",
       "type": "image/png"
     }
