@@ -7,7 +7,8 @@ const CORE_ASSETS = [
     './',
     './index.html',
     './manifest.json',
-    './pic.png'
+    './pic.png',
+    './logo.png'
     // 'my.mp4' hum cache nahi karenge kyunki wo heavy ho sakta hai
 ];
 
